@@ -23,7 +23,7 @@ RUN addgroup -g 10001 -S appgroup && \
 COPY --chown=appuser:appgroup app.py .
 
 # ❌ ERROR: Falta definir la variable de entorno obligatoria requerida por app.py
-ENV APP_SECRET_TOKEN="test2030"
+# ENV APP_SECRET_TOKEN=...
 
 USER appuser
 
