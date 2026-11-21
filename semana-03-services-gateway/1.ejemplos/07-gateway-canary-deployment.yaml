@@ -1,0 +1,192 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: menu-v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: menu-gw
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: menu-gw
+        version: v1
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "charset utf-8;" > /etc/nginx/conf.d/charset.conf
+              echo "☕ Menu v1.0 (Estable - 80%) | Pod: $HOSTNAME" > /usr/share/nginx/html/index.html
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: menu-v1-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: menu-gw
+    version: v1
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: menu-v2-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: menu-gw
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: menu-gw
+        version: v2
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "charset utf-8;" > /etc/nginx/conf.d/charset.conf
+              echo "🚀 Menu v2.0 (Canary - 20%) | Pod: $HOSTNAME" > /usr/share/nginx/html/index.html
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: menu-v2-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: menu-gw
+    version: v2
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canary-frontend-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="es">
+    <body style="font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:2rem;max-width:720px;margin:auto">
+      <h2>🐤☕ KubeCafé — Monitor Visual de Canary (Gateway API 80/20)</h2>
+      <button onclick="sendBatch(10)" style="padding:10px 16px;background:#06b6d4;border:none;border-radius:8px;color:#020617;font-weight:bold;cursor:pointer">🚀 Enviar 10 peticiones a /canary</button>
+      <div style="margin-top:1rem;display:flex;gap:1rem">
+        <div style="flex:1;background:#064e3b;padding:1rem;border-radius:8px">☕ v1.0 (80%): <b id="c1">0</b></div>
+        <div style="flex:1;background:#78350f;padding:1rem;border-radius:8px">🚀 v2.0 Canary (20%): <b id="c2">0</b></div>
+      </div>
+      <pre id="log" style="margin-top:1rem;background:#020617;padding:1rem;border-radius:8px;max-height:260px;overflow:auto"></pre>
+      <script>
+        let v1 = 0, v2 = 0;
+        async function sendBatch(n) {
+          for (let i = 0; i < n; i++) {
+            const txt = await (await fetch('/canary')).text();
+            if (txt.includes('v2.0')) v2++; else v1++;
+            document.getElementById('c1').textContent = v1;
+            document.getElementById('c2').textContent = v2;
+            document.getElementById('log').textContent = txt.trim() + '\n' + document.getElementById('log').textContent;
+          }
+        }
+      </script>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canary-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: canary-frontend
+  template:
+    metadata:
+      labels:
+        app: canary-frontend
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: html
+          configMap:
+            name: canary-frontend-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: canary-frontend-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: canary-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: menu-canary-route
+spec:
+  parentRefs:
+    - name: kubecafe-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /canary-ui
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: canary-frontend-svc
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /canary
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: menu-v1-svc
+          port: 80
+          weight: 80
+        - name: menu-v2-svc
+          port: 80
+          weight: 20

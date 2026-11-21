@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 245" width="220" height="245">
+  <defs>
+    <linearGradient id="sb_cncf-medellin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#2DD4BF"/>
+    </linearGradient>
+    <linearGradient id="sbg_cncf-medellin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0B1120"/>
+      <stop offset="100%" stop-color="#162238"/>
+    </linearGradient>
+  </defs>
+  <polygon points="110,8 204,62 204,170 110,224 16,170 16,62" fill="url(#sb_cncf-medellin)"/>
+  <polygon points="110,16 196,66 196,166 110,216 24,166 24,66" fill="url(#sbg_cncf-medellin)"/>
+  <polygon points="110,22 190,68 190,164 110,210 30,164 30,68" fill="none" stroke="#2DD4BF" stroke-width="1.5" stroke-opacity="0.75"/>
+  <text x="110" y="54" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="7.5" font-weight="800" fill="#FDE047" letter-spacing="1.0">CAPÍTULO OFICIAL</text>
+  <g color="#FDE047" transform="translate(110, 86) scale(0.88) translate(-110, -82)">
+    <rect x="89" y="64" width="42" height="36" rx="5" fill="none" stroke="currentColor" stroke-width="4"/>
+      <path d="M101 82 L107 88 L120 75" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <polygon points="10,118 210,118 202,154 18,154" fill="#0D9488"/>
+  <polygon points="10,118 18,154 24,149 16,118" fill="#000000" opacity="0.3"/>
+  <polygon points="210,118 202,154 196,149 204,118" fill="#000000" opacity="0.3"/>
+  <text x="110" y="131" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="8.5" font-weight="800" fill="#FDE047" letter-spacing="1.6">COLOMBIA</text>
+  <text x="110" y="148" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="800" fill="#FFFFFF" letter-spacing="0.8">CNCF MEDELLÍN</text>
+  <rect x="52" y="159" width="116" height="20" rx="10" fill="#0D9488"/>
+  <text x="110" y="172.5" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="9" font-weight="800" fill="#FFFFFF" letter-spacing="0.8">🇨🇴 COMUNIDAD</text>
+  <text x="110" y="190" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="7" font-weight="700" fill="#CBD5E1" opacity="0.95" letter-spacing="1.0">CLOUD NATIVE</text>
+  <text x="110" y="203" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="10.5" fill="#FDE047" letter-spacing="2.5">★ ★ ★</text>
+</svg>

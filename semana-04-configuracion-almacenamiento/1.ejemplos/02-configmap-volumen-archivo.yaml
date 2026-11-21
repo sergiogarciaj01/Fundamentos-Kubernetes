@@ -1,0 +1,61 @@
+# 📄 Lab 2: ConfigMap montado como Archivo de Configuración (volumeMounts)
+# Analogía KubeCafé: La carta impresa del día colgada en la pared de la barra Nginx.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubecafe-menu-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><title>Menú KubeCafé (ConfigMap)</title></head>
+    <body style="font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:2rem;">
+      <h1>☕ Menú KubeCafé — Cargado desde ConfigMap</h1>
+      <ul>
+        <li>Tinto Campesino — $3.500 COP</li>
+        <li>Espresso Doble — $5.000 COP</li>
+        <li>Capuccino Vainilla — $7.500 COP</li>
+      </ul>
+      <p><i>Si editas el ConfigMap, Kubernetes actualiza este archivo automáticamente sin reconstruir la imagen.</i></p>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: menu-config-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: menu-config-web
+  template:
+    metadata:
+      labels:
+        app: menu-config-web
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: menu-vol
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+      volumes:
+        - name: menu-vol
+          configMap:
+            name: kubecafe-menu-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: menu-config-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: menu-config-web
+  ports:
+    - port: 80
+      targetPort: 80

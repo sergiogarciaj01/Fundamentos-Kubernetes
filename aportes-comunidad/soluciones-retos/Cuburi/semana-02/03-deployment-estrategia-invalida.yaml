@@ -1,0 +1,39 @@
+# 🚨 RETO 3 (Nivel Medio): La Estrategia de Rollout Mal Escrita 🚨
+# Síntoma: Al intentar aplicar el archivo con 'kubectl apply', el API Server devuelve:
+#          "error: error validating data: ValidationError(Deployment.spec.strategy.type): unsupported value"
+#          o rechaza los campos de maxSurge por estar mal ubicados en la jerarquía.
+#
+# Pista: En Kubernetes los tipos de estrategia de un Deployment son únicamente 'RollingUpdate' o 'Recreate'
+#        (respetando mayúsculas y minúsculas CamelCase), y los parámetros 'maxSurge' y 'maxUnavailable'
+#        deben vivir dentro del bloque 'rollingUpdate:'.
+# Misión: Corrige la definición de la estrategia para que sea un 'RollingUpdate' válido.
+# Respuesta: Este caso el deploy falla porque la estructura esta incorrecta, el type solo acepta RollingUpdate o Recreate
+#            y los parametros maxSurge y maxUnavailable van dentro de un bloque propio llamado "rollingUpdate"
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reto-03-estrategia
+  labels:
+    reto: "3"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: catalogo
+  template:
+    metadata:
+      labels:
+        app: catalogo
+    spec:
+      containers:
+        - name: catalogo-svc
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+

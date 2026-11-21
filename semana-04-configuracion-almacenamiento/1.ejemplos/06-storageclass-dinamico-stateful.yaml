@@ -1,0 +1,44 @@
+# 🔄 Lab 6: Aprovisionamiento Dinámico con StorageClass (PVC sin PV manual) + Deployment
+# Analogía KubeCafé: Solicitar bodega automática al clúster y comprobar que los datos sobreviven al borrar el Pod.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: caja-diaria-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caja-persistente
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: caja-persistente
+  template:
+    metadata:
+      labels:
+        app: caja-persistente
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Inicio de Pod $HOSTNAME en $(date)" >> /var/lib/kubecafe/ventas.log
+              cat /var/lib/kubecafe/ventas.log
+              sleep 3600
+          volumeMounts:
+            - name: caja-vol
+              mountPath: /var/lib/kubecafe
+      volumes:
+        - name: caja-vol
+          persistentVolumeClaim:
+            claimName: caja-diaria-pvc

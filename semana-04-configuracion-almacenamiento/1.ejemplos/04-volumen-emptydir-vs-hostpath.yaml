@@ -1,0 +1,31 @@
+# ⏳ Lab 4: Almacenamiento Efímero (emptyDir) vs Persistente en Nodo (hostPath)
+# Analogía KubeCafé: Bandeja temporal en la barra (emptyDir) vs estante en la mesa actual (hostPath).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-almacenamiento-local
+spec:
+  containers:
+    - name: escritor
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - |
+          echo "Escribiendo pedido temporal en /tmp-bandeja..."
+          date >> /tmp-bandeja/pedidos.log
+          echo "Escribiendo registro en /nodo-estante..."
+          date >> /nodo-estante/historial.log
+          sleep 3600
+      volumeMounts:
+        - name: bandeja-efimera
+          mountPath: /tmp-bandeja
+        - name: estante-nodo
+          mountPath: /nodo-estante
+  volumes:
+    - name: bandeja-efimera
+      emptyDir: {}
+    - name: estante-nodo
+      hostPath:
+        path: /tmp/kubecafe-nodo-estante
+        type: DirectoryOrCreate

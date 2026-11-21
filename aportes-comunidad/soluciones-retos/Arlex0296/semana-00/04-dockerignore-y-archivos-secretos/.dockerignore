@@ -1,0 +1,25 @@
+# Secretos
+.env
+.env.*
+*.pem
+*.key
+
+# Control de versiones
+.git
+.gitignore
+
+# Archivos temporales y caché de Python
+__pycache__/
+*.pyc
+*.tmp
+*.log
+
+# Carpetas de desarrollo
+.venv/
+venv/
+.vscode/
+.idea/
+
+# Archivos de Docker que no hacen falta dentro de la imagen
+Dockerfile
+.dockerignore

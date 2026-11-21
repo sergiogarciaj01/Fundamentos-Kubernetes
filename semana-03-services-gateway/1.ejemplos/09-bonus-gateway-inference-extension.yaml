@@ -1,0 +1,80 @@
+# 🌟 Bonus Lab: Gateway API Inference Extension (InferencePool + InferenceModel)
+# 📚 Documentación Oficial: https://gateway-api-inference-extension.sigs.k8s.io/
+# 📰 Blog Oficial K8s: https://kubernetes.io/blog/2025/06/05/introducing-gateway-api-inference-extension/
+# ⚠️ REQUISITO PREVIO: Aplicar los CRDs antes de ejecutar este manifiesto:
+# kubectl apply -f semana-03-services-gateway/1.ejemplos/09a-crds-inference-extension.yaml
+# (Verificar con: kubectl get crd | grep inference)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-cpu-pool
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ollama-cpu
+  template:
+    metadata:
+      labels:
+        app: ollama-cpu
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          ports:
+            - containerPort: 11434
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+---
+apiVersion: inference.networking.x-k8s.io/v1alpha2
+kind: InferencePool
+metadata:
+  name: kubecafe-llm-pool
+spec:
+  targetPortNumber: 11434
+  selector:
+    app: ollama-cpu
+---
+apiVersion: inference.networking.x-k8s.io/v1alpha2
+kind: InferenceModel
+metadata:
+  name: barista-rapido
+spec:
+  modelName: qwen2.5:0.5b
+  criticality: Critical
+  poolRef:
+    name: kubecafe-llm-pool
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubecafe-llm-pool
+spec:
+  selector:
+    app: ollama-cpu
+  ports:
+    - name: http
+      protocol: TCP
+      port: 11434
+      targetPort: 11434
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kubecafe-inference-route
+spec:
+  parentRefs:
+    - name: kubecafe-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1/chat/completions
+      backendRefs:
+        - name: kubecafe-llm-pool
+          port: 11434

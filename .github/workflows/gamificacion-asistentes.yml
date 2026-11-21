@@ -1,145 +1,275 @@
-name: 🏆 Gamificación - Actualizar Rango Automáticamente
+name: 🏆 Gamificación - Evaluar Ejercicios y Actualizar Ranking Automáticamente
 
 on:
-  pull_request_target:
-    types: [closed]
+  push:
     branches: [main, master]
+    paths:
+      - 'aportes-comunidad/**'
+      - 'asistentes.json'
+      - 'ASISTENTES.md'
+      - 'scripts/generar-asistentes.js'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Número de Pull Request opcional para evaluar y publicar comentario (ej: 45 o 49)'
+        required: false
+        type: string
 
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   actualizar-rango:
-    name: Actualizar Rango en ASISTENTES.md
-    if: github.event.pull_request.merged == true
+    name: Evaluar Ejercicios y Actualizar Ranking en ASISTENTES.md
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-24.04
     steps:
       - name: 📥 Clonar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: 🎖️ Calcular y actualizar rango de asistente
+      - name: 🎖️ Evaluar ejercicios completados y actualizar ranking
         id: calcular
         uses: actions/github-script@v9
+        env:
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
         with:
           script: |
             const fs = require('fs');
-            const pr = context.payload.pull_request;
+            const {
+              INSTRUCTORS,
+              cleanLinkedin,
+              discoverOfficialChallenges,
+              evaluateUserProgress,
+              syncAllFiles
+            } = require('./scripts/generar-asistentes.js');
+
+            let pr = null;
+            const inputPrNum = (process.env.INPUT_PR_NUMBER || '').trim();
+
+            if (inputPrNum && /^\d+$/.test(inputPrNum)) {
+              const { data: fetchedPr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: parseInt(inputPrNum, 10)
+              });
+              pr = fetchedPr;
+            } else {
+              const { data: associatedPrs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha
+              });
+              if (associatedPrs && associatedPrs.length > 0) {
+                pr = associatedPrs.find(p => p.merged_at) || associatedPrs[0];
+              }
+            }
+
+            let data = JSON.parse(fs.readFileSync('asistentes.json', 'utf8'));
+            let mdBefore = fs.readFileSync('ASISTENTES.md', 'utf8');
+            let readmeBefore = fs.existsSync('README.md') ? fs.readFileSync('README.md', 'utf8') : '';
+
+            if (!pr) {
+              console.log('Sincronizando ranking general sin PR específico asociado.');
+              syncAllFiles(data);
+              const mdAfter = fs.readFileSync('ASISTENTES.md', 'utf8');
+              const readmeAfter = fs.existsSync('README.md') ? fs.readFileSync('README.md', 'utf8') : '';
+              core.setOutput('has_updates', (mdBefore !== mdAfter || readmeBefore !== readmeAfter) ? 'true' : 'false');
+              core.setOutput('user', 'comunidad');
+              core.setOutput('new_rank', '⛵ Tripulación');
+              core.setOutput('points', '');
+              core.setOutput('pr_number', '');
+              core.setOutput('report', '');
+              return;
+            }
+
             const user = pr.user.login;
 
             if (pr.user.type === 'Bot' || user.includes('[bot]')) {
               console.log('Ignorando bots de GitHub');
               core.setOutput('has_updates', 'false');
+              core.setOutput('points', '');
               return;
             }
 
-            // Ignorar al instructor / mantenedor principal (siempre mantiene su rango fijo de Capitán)
-            const instructors = ['edwinbermudez91', context.repo.owner.toLowerCase()];
+            const instructors = [...INSTRUCTORS, context.repo.owner.toLowerCase()];
             if (instructors.includes(user.toLowerCase())) {
-              console.log(`Ignorando instructor @${user}: mantiene su rango fijo de Capitán.`);
-              core.setOutput('has_updates', 'false');
+              console.log(`Ignorando instructor @${user}: no participa en la tabla de puntajes.`);
+              syncAllFiles(data);
+              const mdAfter = fs.readFileSync('ASISTENTES.md', 'utf8');
+              const readmeAfter = fs.existsSync('README.md') ? fs.readFileSync('README.md', 'utf8') : '';
+              core.setOutput('has_updates', (mdBefore !== mdAfter || readmeBefore !== readmeAfter) ? 'true' : 'false');
+              core.setOutput('user', user);
+              core.setOutput('new_rank', '⚓ Capitán K8s');
+              core.setOutput('points', '');
+              core.setOutput('pr_number', '');
+              core.setOutput('report', '');
               return;
             }
 
-            // Consultar todos los PRs cerrados y fusionados de este usuario
-            const pulls = await github.paginate(github.rest.pulls.list, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed',
-              per_page: 100
-            });
-
-            const mergedCount = pulls.filter(p =>
-              p.user &&
-              p.user.login.toLowerCase() === user.toLowerCase() &&
-              p.merged_at !== null
-            ).length;
-
-            console.log(`Usuario @${user} tiene ${mergedCount} PR(s) fusionados.`);
-
-            // Determinar rango de navegación según gamificación
-            let newRank = '⛵ Marinero';
-            if (mergedCount >= 6) {
-              newRank = '⚓ Capitán k8s';
-            } else if (mergedCount >= 3) {
-              newRank = '🧭 Timonel';
-            }
-
-            let content = fs.readFileSync('ASISTENTES.md', 'utf8');
-            let lines = content.split('\n');
-            let found = false;
-            let updated = false;
-
-            lines = lines.map(line => {
-              // Proteger siempre la fila del instructor para que no se modifique
-              if (instructors.some(inst => line.toLowerCase().includes(inst))) {
-                return line;
-              }
+            // Detectar si agregaron fila manual en ASISTENTES.md
+            let manualEntry = null;
+            for (const line of mdBefore.split('\n')) {
               if (
-                line.toLowerCase().includes('@' + user.toLowerCase()) ||
-                line.toLowerCase().includes('github.com/' + user.toLowerCase())
+                line.trim().startsWith('|') &&
+                (line.toLowerCase().includes(user.toLowerCase()) || line.includes('TU-USUARIO'))
               ) {
-                found = true;
-                let parts = line.split('|');
+                const parts = line.split('|').map(p => p.trim());
                 if (parts.length >= 6) {
-                  let currentRank = parts[4].trim();
-                  if (currentRank !== newRank) {
-                    parts[4] = ' ' + newRank + ' ';
-                    updated = true;
-                    return parts.join('|');
-                  }
+                  const nameMatch = (parts[1] + ' ' + parts[2]).match(/\*\*(.+?)\*\*/);
+                  const linkedinMatch = line.match(/linkedin\.com\/[^\s)"]+/i);
+                  manualEntry = {
+                    github: user,
+                    nombre: nameMatch ? nameMatch[1].trim() : user,
+                    rol: parts[2] || 'Tripulante de la Comunidad',
+                    linkedin: linkedinMatch ? cleanLinkedin('https://' + linkedinMatch[0]) : '',
+                    redes: [],
+                    rango: '⛵ Marinero',
+                    motivacion: parts[parts.length - 2] || `Aporte en PR #${pr.number}: ${pr.title.replace(/\|/g, '')}`
+                  };
                 }
               }
-              return line;
-            });
-
-            // Si el usuario no estaba en la tabla, agregarlo automáticamente
-            if (!found) {
-              const newRow = `| @${user} | Tripulante de la Comunidad | [@${user}](https://github.com/${user}) | ${newRank} | Aporte en PR #${pr.number}: ${pr.title.replace(/\|/g, '')} |`;
-              lines.push(newRow);
-              updated = true;
             }
 
-            if (updated) {
-              fs.writeFileSync('ASISTENTES.md', lines.join('\n'));
-              core.setOutput('has_updates', 'true');
-              core.setOutput('new_rank', newRank);
-              core.setOutput('count', mergedCount.toString());
-            } else {
-              core.setOutput('has_updates', 'false');
+            const existingIndex = data.findIndex(item => item.github.toLowerCase() === user.toLowerCase());
+            if (existingIndex < 0) {
+              data.push(
+                manualEntry || {
+                  github: user,
+                  nombre: pr.user.name || user,
+                  rol: 'Tripulante de la Comunidad',
+                  linkedin: '',
+                  redes: [],
+                  rango: '⛵ Marinero',
+                  motivacion: `Aporte en PR #${pr.number}: ${pr.title.replace(/\|/g, '')}`
+                }
+              );
             }
+
+            const officialChallenges = discoverOfficialChallenges();
+            const userEval = evaluateUserProgress(user, officialChallenges);
+
+            syncAllFiles(data);
+
+            const mdAfter = fs.readFileSync('ASISTENTES.md', 'utf8');
+            const readmeAfter = fs.existsSync('README.md') ? fs.readFileSync('README.md', 'utf8') : '';
+
+            const reportLines = userEval.detailedReport
+              .filter(r => r.solvedCount > 0 || r.hasBitacora)
+              .map(r => {
+                const earnedXp = r.solvedCount * 10;
+                const bitacoraNote = r.hasBitacora ? ' • 📔 *Bitácora incluida*' : '';
+                if (r.isComplete) {
+                  return `- ✅ **${r.weekKey}:** \`${r.solvedCount}/${r.totalExpected} retos validados\` *(¡Semana 100% completada! +${earnedXp} XP${bitacoraNote})*`;
+                }
+                if (r.solvedCount > 0) {
+                  return `- ⏳ **${r.weekKey}:** \`${r.solvedCount}/${r.totalExpected} retos validados\` *(+${earnedXp} XP${bitacoraNote} — Faltan por resolver/corregir: ${r.missingNums.join(', ')})*`;
+                }
+                return `- 📔 **${r.weekKey}:** *Bitácora semanal registrada en tu Portafolio*`;
+              });
+
+            const reportMarkdown =
+              reportLines.length > 0
+                ? reportLines.join('\n')
+                : '- 📝 **Registro en el Muro de la Tripulación:** `+10 XP`';
+
+            const missingBitacoraWeeks = userEval.detailedReport
+              .filter(r => r.solvedCount > 0 && !r.hasBitacora)
+              .map(r => r.weekKey);
+            const latestMissingBitacora = missingBitacoraWeeks.length > 0
+              ? missingBitacoraWeeks[missingBitacoraWeeks.length - 1]
+              : '';
+
+            core.setOutput('has_updates', 'true');
+            core.setOutput('user', user);
+            core.setOutput('new_rank', userEval.rango);
+            core.setOutput('points', userEval.points.toString());
+            core.setOutput('pr_number', pr.number.toString());
+            core.setOutput('report', reportMarkdown);
+            core.setOutput('missing_bitacora_week', latestMissingBitacora);
 
       - name: 💾 Guardar cambios en el repositorio
         if: steps.calcular.outputs.has_updates == 'true'
+        env:
+          GH_USER: ${{ steps.calcular.outputs.user }}
+          POINTS: ${{ steps.calcular.outputs.points }}
+          NEW_RANK: ${{ steps.calcular.outputs.new_rank }}
+          DEFAULT_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ASISTENTES.md
-          git commit -m "chore(gamificacion): actualizar rango de navegación de @${{ github.event.pull_request.user.login }} a ${{ steps.calcular.outputs.new_rank }} [skip ci]"
-          git push origin HEAD:${{ github.event.repository.default_branch }}
+          git add aportes-comunidad/soluciones-retos/ asistentes.json ASISTENTES.md README.md
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(gamificacion): actualizar puntaje y portafolio de @${GH_USER} (${POINTS:-10} XP - ${NEW_RANK}) [skip ci]"
+            git pull --rebase origin "${DEFAULT_BRANCH}"
+            git push origin HEAD:"${DEFAULT_BRANCH}"
+          fi
 
-      - name: 📣 Felicitar al contribuyente en el Pull Request
-        if: steps.calcular.outputs.has_updates == 'true'
+      - name: 📣 Publicar reporte de evaluación y puntaje en el Pull Request
+        if: steps.calcular.outputs.pr_number != '' && steps.calcular.outputs.points != ''
         uses: actions/github-script@v9
+        env:
+          GH_USER: ${{ steps.calcular.outputs.user }}
+          PR_NUMBER: ${{ steps.calcular.outputs.pr_number }}
+          NEW_RANK: ${{ steps.calcular.outputs.new_rank }}
+          POINTS: ${{ steps.calcular.outputs.points }}
+          REPORT: ${{ steps.calcular.outputs.report }}
+          MISSING_BITACORA_WEEK: ${{ steps.calcular.outputs.missing_bitacora_week }}
         with:
           script: |
-            const user = context.payload.pull_request.user.login;
-            const rank = '${{ steps.calcular.outputs.new_rank }}';
-            const count = '${{ steps.calcular.outputs.count }}';
+            const { buildShareLinks, buildBitacoraIssueUrl } = require('./scripts/generar-asistentes.js');
+            const user = process.env.GH_USER || '';
+            const prNumber = parseInt(process.env.PR_NUMBER || '0', 10);
+            const rank = process.env.NEW_RANK || '';
+            const points = process.env.POINTS || '';
+            const report = process.env.REPORT || '';
+            const missingBitacoraWeek = process.env.MISSING_BITACORA_WEEK || '';
 
-            const comment = `### 🏆 ¡Felicidades @${user}! Tu Pull Request ha sido fusionado con éxito.
-            
-            🎖️ **Tu rango de navegación ha sido actualizado automáticamente en el [Muro de Asistentes](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/ASISTENTES.md):**
-            👉 **${rank}** *(Total de aportes fusionados: ${count})*
-            
-            ¡Gracias por navegar y construir en comunidad con **Cloud Native Medellín**! 🏔️☕⚓`;
+            if (!points || !prNumber) return;
+
+            const share = buildShareLinks(user, user, rank, parseInt(points, 10), true, user);
+            const bitacoraUrl = buildBitacoraIssueUrl(user, missingBitacoraWeek || 'semana-01');
+            const bitacoraCta = missingBitacoraWeek
+              ? [
+                  '',
+                  `> 💡 **¡Reto Bonus (+10 XP)!** Aún no has registrado tu bitácora de \`${missingBitacoraWeek}\`.`,
+                  `> Haz clic aquí para sumar **+10 XP extra** en 20 segundos y obtener tu post personalizado para LinkedIn: **[📔 Reclamar +10 XP con mi Bitácora](${bitacoraUrl})**`
+                ].join('\n')
+              : '';
+
+            const comment = [
+              `### 🏆 ¡Felicidades @${user}! Tu Pull Request ha sido fusionado con éxito.`,
+              '',
+              '📊 **Reporte de Evaluación de tus Ejercicios y Portafolio:**',
+              `- 🎖️ **Rango actual:** **${rank}**`,
+              `- ⚡ **Puntaje Total:** **${points} XP**`,
+              `- 🎓 **Tu Portafolio Profesional K8s:** **[Ver mi Portafolio Verificado (\`README.md\`)](${share.portfolioUrl})**`,
+              '',
+              '#### 📋 Detalle por semana:',
+              report,
+              bitacoraCta,
+              '',
+              '---',
+              '',
+              '### 📣 ¡Comparte tu Portafolio e Insignia en Redes Sociales con 1 clic!',
+              '',
+              share.badgesBar,
+              '',
+              '#### 🐙 Insignia para el `README.md` de tu perfil de GitHub:',
+              '```markdown',
+              share.githubProfileSnippet,
+              '```',
+              '',
+              `👉 **[Ver la Tabla de Posiciones en ASISTENTES.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/ASISTENTES.md)**`
+            ].join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: prNumber,
               body: comment
             });

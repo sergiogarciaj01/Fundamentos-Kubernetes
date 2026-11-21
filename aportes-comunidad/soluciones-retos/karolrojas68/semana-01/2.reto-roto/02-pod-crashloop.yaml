@@ -1,0 +1,23 @@
+# 🚨 RETO 2 (Nivel Medio): El Pod que nace y muere sin parar 🚨
+# Síntoma: El estado pasa a 'Error' y luego a 'CrashLoopBackOff' (se reinicia una y otra vez).
+# Pista: Cuando un contenedor arranca pero falla por dentro, 'describe' no basta.
+#        Usa 'kubectl logs reto-02-crash' para ver qué gritó el contenedor antes de morir.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: reto-02-crash
+  labels:
+    reto: "2"
+spec:
+  containers:
+    - name: trabajador-confundido
+      image: busybox:latest
+      #command: ["sh", "-c", "echho '¡Hola Cloud Native Medellín!' && sleep 3600"] # ERROR
+      command: ["sh", "-c", "echo '¡Hola Cloud Native Medellín!' && sleep 3600"]
+
+      #error comando echho no existe entonces se reinicia  el contenedor una y n veces
+
+      #se consultan los pods "kubectl get pods"
+      # Se consultan los logs y se evidencia el mensaje "kubectl logs reto-02-crash" : ¡Hola Cloud Native Medellín!
+      

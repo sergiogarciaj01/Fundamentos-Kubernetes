@@ -1,0 +1,18 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: "iximiuz-pool"
+spec:
+  blocks:
+    - start: "172.16.0.200"
+      stop: "172.16.0.240"
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: "iximiuz-l2-policy"
+spec:
+  interfaces:
+    - ^eth0$
+  externalIPs: true
+  loadBalancerIPs: true

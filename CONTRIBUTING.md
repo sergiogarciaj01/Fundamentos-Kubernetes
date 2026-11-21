@@ -1,24 +1,39 @@
-# 🤝 Guía para Principiantes: Cómo Contribuir a Fundamentos-Kubernetes
+# 🤝 Guía de la Comunidad: Cómo Contribuir y Dar tus Primeros Pasos en Fundamentos-Kubernetes
+
+<div align="center">
+
+[![Registrarme en 30 seg](https://img.shields.io/badge/⛵_Registrarme_en_ASISTENTES-2ea44f?style=for-the-badge&logo=github)](https://github.com/edwinbermudez91/Fundamentos-Kubernetes/issues/new?template=registro-asistente.yml)
+[![Llenar Bitácora (+10 XP)](https://img.shields.io/badge/📔_Bitácora_y_Portafolio_(+10_XP)-8B5CF6?style=for-the-badge&logo=github)](https://github.com/edwinbermudez91/Fundamentos-Kubernetes/issues/new?template=bitacora-semanal.yml)
+[![Sincronizar Fork](https://img.shields.io/badge/🔄_Cómo_Sincronizar_tu_Fork-00C7B7?style=for-the-badge&logo=git&logoColor=white)](./recursos/como-sincronizar-tu-fork.md)
+[![Ver Ranking](https://img.shields.io/badge/🏆_Ranking_y_Portafolios-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)](./ASISTENTES.md)
+
+</div>
 
 ¡Qué alegría que quieras aportar! Aquí **cualquier mejora cuenta**: desde agregar tu nombre a la lista de asistentes hasta resolver un reto técnico de Kubernetes.
 
 Si es tu primera vez usando **Git** o haciendo un **Pull Request (PR)** en GitHub, ¡respira tranquilo! Esta guía está diseñada paso a paso para que no te pierdas y aprendas haciendo.
 
+> [!IMPORTANT]
+> 🇨🇴 **Capítulo Oficial Cloud Native Medellín (CNCF):**  
+> Antes de empezar, asegúrate de estar registrado en la comunidad oficial de [**Cloud Native Medellín en CNCF Community Groups**](https://ocgroups.dev/cncf/group/2majk4r) para enterarte de próximos meetups presenciales, talleres prácticos y noticias del ecosistema.
+
 ---
 
-## 🎯 3 Formas Fáciles de Empezar Hoy Mismo
+## 🎯 4 Formas Fáciles de Empezar Hoy Mismo
 
-1. **Tu primer PR en 5 minutos ([`ASISTENTES.md`](./ASISTENTES.md)):** Abre el archivo `ASISTENTES.md` y agrega tu nombre al final de la tabla. ¡Con este solo paso zarpas en el workshop!
-2. **Solucionar un "Reto Roto":** En cada semana encontrarás una carpeta `2.reto-roto/` con manifiestos YAML que fallan a propósito.
+1. **Regístrate en el Muro de Asistentes ([`ASISTENTES.md`](./ASISTENTES.md)):** Puedes hacerlo en 30 segundos usando nuestro **[⛵ Formulario Visual de Registro](https://github.com/edwinbermudez91/Fundamentos-Kubernetes/issues/new?template=registro-asistente.yml)** (¡el bot agregará tu foto y tus datos automáticamente sin errores!) o agregando tus datos en [`asistentes.json`](./asistentes.json) vía Pull Request. ¡Con este paso zarpas con **+10 XP**!
+2. **Solucionar un "Reto Roto" (+10 XP por reto):** En cada semana encontrarás una carpeta `2.reto-roto/` con manifiestos YAML o Dockerfiles que fallan a propósito.
    * ⚠️ **Regla de oro:** ¡Nunca modifiques los archivos originales de `2.reto-roto/`!
-   * Crea una carpeta personal: `aportes-comunidad/soluciones-retos/<tu-usuario-github>/semana-XX/` y pega allí tu YAML corregido con comentarios `#` explicando el error y la solución.
-3. **Compartir trucos o apuntes:** ¿Descubriste un comando útil o un alias genial? Agrégalo en [`aportes-comunidad/cheatsheets/`](./aportes-comunidad/cheatsheets).
+   * Crea una carpeta personal: `aportes-comunidad/soluciones-retos/<tu-usuario-github>/semana-XX/` y pega allí tu archivo corregido con comentarios `#` explicando el error y la solución.
+3. **Registrar tu Bitácora Semanal y Construir tu Portafolio (+10 XP Bonus):** Documenta lo que aprendiste cada semana en 1 minuto usando el **[📔 Formulario Visual de Bitácora Semanal](https://github.com/edwinbermudez91/Fundamentos-Kubernetes/issues/new?template=bitacora-semanal.yml)** (o copiando [`PLANTILLA-BITACORA.md`](./aportes-comunidad/soluciones-retos/PLANTILLA-BITACORA.md) como `bitacora.md`). El bot generará tu **Portafolio Profesional** con **Banner SVG**, **insignias hexagonales KubeCafé**, enlace directo `🎓 Portafolio` en el **README principal** (Podio Top 5) y texto listo para **LinkedIn** etiquetando a `@Cloud Native Colombia (Armenia, Bogota, Cali, Medellin)` (ver [`recursos/portafolio-y-badges.md`](./recursos/portafolio-y-badges.md)).
+4. **Compartir trucos o apuntes:** ¿Descubriste un comando útil o un alias genial? Agrégalo en [`aportes-comunidad/cheatsheets/`](./aportes-comunidad/cheatsheets) y revisa nuestra [**⚡ Guía Shell DX para Kubernetes (`recursos/guia-shell-dx-kubernetes.md`)**](./recursos/guia-shell-dx-kubernetes.md) y la [**🔄 Guía para Mantener tu Fork Sincronizado (`recursos/como-sincronizar-tu-fork.md`)**](./recursos/como-sincronizar-tu-fork.md).
 
 > [!TIP]
-> **🤖 Gamificación Automática:** ¡No te preocupes por cambiar tu rango a mano! Cada vez que un mentor apruebe y fusione uno de tus Pull Requests, nuestro bot de GitHub Actions contará tus aportes y actualizará automáticamente tu nivel en [`ASISTENTES.md`](./ASISTENTES.md):
-> * ⛵ **Marinero:** 1 PR aprobado.
-> * 🧭 **Timonel:** 3 PRs aprobados.
-> * ⚓ **Capitán K8s:** 6+ PRs aprobados.
+> **🤖 Gamificación Automática (+XP y Rangos):** ¡No te preocupes por cambiar tu rango a mano! Nuestro bot de GitHub Actions valida tus soluciones y bitácoras, suma tus XP y actualiza tu medalla en [`ASISTENTES.md`](./ASISTENTES.md):
+> * **+10 XP** por registro inicial • **+10 XP** por cada reto roto validado • **+10 XP Bonus** por cada bitácora semanal.
+> * ⛵ **Marinero (Bronce):** Registro inicial (`10 XP` base).
+> * 🧭 **Timonel K8s (Plata):** **2+ Semanas** completadas al 100%.
+> * ⚓ **Capitán K8s (Oro):** **6 Semanas** completadas al 100% + proyecto final.
 
 ---
 
@@ -74,19 +89,27 @@ Una **rama** (*branch*) es una línea de trabajo independiente para no mezclar t
 git checkout -b TU-USUARIO/semana-01
 ```
 
+#### 📁 Crea tu carpeta personal y copia allí los retos (¡sin tocar los originales!)
+Trabaja **siempre** dentro de `aportes-comunidad/soluciones-retos/TU-USUARIO/semana-XX/`:
+
+```bash
+mkdir -p aportes-comunidad/soluciones-retos/TU-USUARIO/semana-01
+cp semana-01-arquitectura/2.reto-roto/*.yaml aportes-comunidad/soluciones-retos/TU-USUARIO/semana-01/
+```
+
 ---
 
 ### Paso 4: Guarda tus cambios (`git add` y `git commit`)
 
-Cuando edites archivos en VS Code y los guardes (`Cmd + S` o `Ctrl + S`), los cambios están en tu disco, pero Git todavía no los ha registrado en su historia oficial.
+Cuando edites los archivos **dentro de `aportes-comunidad/soluciones-retos/TU-USUARIO/semana-XX/`** en VS Code y los guardes (`Cmd + S` o `Ctrl + S`), los cambios están en tu disco, pero Git todavía no los ha registrado en su historia oficial.
 
 Para guardarlos en Git, ejecutas dos comandos:
 
-#### 1. Prepara los cambios:
+#### 1. Prepara **solo** tu carpeta personal:
 ```bash
-git add .
+git add aportes-comunidad/soluciones-retos/TU-USUARIO/
 ```
-* **¿Qué hace?** El punto (`.`) le dice a Git: *"toma todos los archivos que acabo de modificar o crear en esta carpeta y colócalos en la caja listos para empacar"*.
+* **¿Qué hace?** Agrega únicamente tus soluciones en `aportes-comunidad/soluciones-retos/TU-USUARIO/` y evita subir por accidente cambios en los archivos originales de `2.reto-roto/`. Verifica con `git status` que no hayas modificado nada fuera de tu carpeta.
 
 #### 2. Sella y titula tu paquete:
 ```bash
@@ -105,7 +128,7 @@ git commit -m "Tu mensaje descriptivo aquí"
 | **Semana 00 (Docker)** | `git checkout -b TU-USUARIO/semana-00` | `git commit -m "Solución al reto roto de Dockerfile semana 0"` |
 | **Semana 01 (Pods)** | `git checkout -b TU-USUARIO/semana-01` | `git commit -m "Corrige error de imagen del pod rebelde semana 1"` |
 | **Semana 02 (Deployments)**| `git checkout -b TU-USUARIO/semana-02` | `git commit -m "Solución al reto de réplicas y deployments semana 2"` |
-| **Semana 03 (Redes)** | `git checkout -b TU-USUARIO/semana-03` | `git commit -m "Configura Service ClusterIP y puerto correcto semana 3"` |
+| **Semana 03 (Redes)** | `git checkout -b TU-USUARIO/semana-03` | `git commit -m "Configura Service ClusterIP y Gateway API semana 3"` |
 | **Semana 04 (Almacenamiento)**| `git checkout -b TU-USUARIO/semana-04` | `git commit -m "Solución de ConfigMaps y PVC persistente semana 4"` |
 | **Semana 05 (Seguridad/Probes)**| `git checkout -b TU-USUARIO/semana-05` | `git commit -m "Ajuste de sondas de salud livenessProbe semana 5"` |
 | **Semana 06 (Helm/Proyecto)**| `git checkout -b TU-USUARIO/semana-06`| `git commit -m "Despliegue de Chart de Helm del proyecto final"` |
@@ -136,7 +159,7 @@ git push origin TU-USUARIO/semana-01
 
 ---
 
-## ❓ Preguntas Frecuentes de Principiantes
+## ❓ Preguntas Frecuentes de la Comunidad
 
 <details>
 <summary><b>1. ¿Tengo que hacer Fork y Clone cada semana?</b></summary>
@@ -146,8 +169,8 @@ git push origin TU-USUARIO/semana-01
 En las semanas siguientes (Semana 2, 3, 4, etc.) solo tienes que:
 1. Volver a la rama principal: `git checkout main`
 2. Traer los cambios nuevos del curso (ver pregunta 2 abajo).
-3. Crear tu nueva rama para esa semana: `git checkout -b solucion-semana-02`
-4. Hacer tus cambios, `git add .`, `git commit -m "..."`, `git push` y abrir el PR.
+3. Crear tu nueva rama para esa semana: `git checkout -b TU-USUARIO/semana-02`
+4. Copiar los retos a tu carpeta `aportes-comunidad/soluciones-retos/TU-USUARIO/semana-02/`, resolverlos, ejecutar `git add aportes-comunidad/soluciones-retos/TU-USUARIO/`, `git commit -m "..."`, `git push` y abrir el PR.
 </details>
 
 <details>

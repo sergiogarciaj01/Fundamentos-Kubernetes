@@ -1,0 +1,67 @@
+# ==============================================================================
+# EJEMPLO 02: Service NodePort (Exposición Externa Directa por Puerto del Nodo)
+# Analogía: Ventanilla directa en la fachada de KubeCafé (puerto 30080).
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubecafe-menu-web
+  labels:
+    app: kubecafe-menu
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kubecafe-menu
+  template:
+    metadata:
+      labels:
+        app: kubecafe-menu
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              cat <<EOF > /usr/share/nginx/html/index.html
+              <!DOCTYPE html>
+              <html lang="es">
+              <head><meta charset="UTF-8" /><title>Menú KubeCafé</title></head>
+              <body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070B14;color:#F8FAFC;font-family:system-ui,sans-serif;">
+                <div style="background:#0F172A;border:1px solid #F59E0B;border-radius:16px;padding:2rem;text-align:center;max-width:480px;">
+                  <div style="font-size:2.4rem;">📋☕</div>
+                  <h1 style="margin:0.5rem 0;font-size:1.3rem;color:#FBBF24;">Menú KubeCafé (NodePort :30080)</h1>
+                  <div style="background:#020617;border-radius:8px;padding:0.8rem;font-family:monospace;color:#34D399;">Pod: <b>$HOSTNAME</b></div>
+                  <button onclick="location.reload()" style="margin-top:1rem;padding:0.55rem 1.1rem;border:none;border-radius:8px;background:#F59E0B;color:#020617;font-weight:700;cursor:pointer;">🔄 Recargar</button>
+                </div>
+              </body>
+              </html>
+              EOF
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: menu-nodeport-svc
+spec:
+  type: NodePort
+  selector:
+    app: kubecafe-menu
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+      # Rango válido en Kubernetes: 30000 - 32767
+      nodePort: 30080

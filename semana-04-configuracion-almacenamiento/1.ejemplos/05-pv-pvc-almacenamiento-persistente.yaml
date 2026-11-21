@@ -1,0 +1,50 @@
+# 📦 Lab 5: PersistentVolume (PV) + PersistentVolumeClaim (PVC)
+# Analogía KubeCafé: Bodega física (PV) + Contrato de reserva de espacio (PVC) usado por los Pods.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: bodega-kubecafe-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /tmp/kubecafe-bodega-pv
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bodega-kubecafe-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: inventario-bodega-pod
+spec:
+  containers:
+    - name: inventario
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - |
+          echo "Pedido guardado en bodega persistente ($(date))" >> /datos/libro-contable.txt
+          cat /datos/libro-contable.txt
+          sleep 3600
+      volumeMounts:
+        - name: bodega
+          mountPath: /datos
+  volumes:
+    - name: bodega
+      persistentVolumeClaim:
+        claimName: bodega-kubecafe-pvc

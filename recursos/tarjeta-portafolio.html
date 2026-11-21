@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tarjeta de Portafolio KubeCafé — Cloud Native Medellín</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --panel: #0f172a;
+      --border: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --gold: #fde047;
+      --green: #10b981;
+      --linkedin: #0a66c2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at top, #172554 0%, var(--bg) 55%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 16px 48px;
+    }
+    .container {
+      width: 100%;
+      max-width: 980px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    header {
+      text-align: center;
+    }
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 1.65rem;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .canvas-wrap {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+    button, a.btn {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      padding: 13px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+    button:hover, a.btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+    .btn-download { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+    .btn-copy { background: linear-gradient(135deg, #38bdf8, #0284c7); color: #fff; }
+    .btn-linkedin { background: var(--linkedin); color: #fff; }
+    .btn-back { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
+    .tip {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #1e3a8a;
+      border-left: 4px solid var(--gold);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+    .tip strong { color: #fff; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #10b981;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="./insignias/banner-portafolio.svg" alt="Portafolio Cloud Native &amp; Kubernetes — CNCF Medellín" style="width: 100%; max-width: 760px; height: auto; display: block; margin: 0 auto 10px;" />
+      <p>Descarga tu tarjeta oficial en alta resolución (1200×630) lista para publicar en LinkedIn, Instagram, WhatsApp o Telegram.</p>
+    </header>
+
+    <div class="canvas-wrap">
+      <canvas id="card" width="1200" height="630"></canvas>
+    </div>
+
+    <div class="actions">
+      <button id="btnDownload" class="btn-download">⬇️ Descargar Tarjeta PNG</button>
+      <button id="btnCopy" class="btn-copy">📋 Copiar Texto para LinkedIn</button>
+      <a class="btn btn-linkedin" href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noopener">🚀 Abrir LinkedIn</a>
+      <a id="btnBack" class="btn btn-back" href="https://github.com/edwinbermudez91/Fundamentos-Kubernetes" target="_blank" rel="noopener">↩️ Volver al Portafolio</a>
+    </div>
+
+    <div class="tip">
+      <strong>💡 Tip rápido para LinkedIn:</strong><br/>
+      1. Haz clic en <strong>Descargar Tarjeta PNG</strong> y luego en <strong>Copiar Texto para LinkedIn</strong>.<br/>
+      2. En LinkedIn, pega el texto, <strong>borra y vuelve a escribir <code>@Cloud Native Colombia</code></strong> para seleccionarnos del menú desplegable (<em>Cloud Native Colombia (Armenia, Bogota, Cali, Medellin)</em>) y adjunta la imagen PNG descargada.
+    </div>
+  </div>
+
+  <div id="toast" class="toast">✅ ¡Listo!</div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const user = (params.get('user') || 'tripulante').trim();
+    const nombre = (params.get('nombre') || user).trim();
+    const rol = (params.get('rol') || 'Tripulante Cloud Native').trim();
+    const rango = (params.get('rango') || '⛵ Marinero').trim();
+    const xp = (params.get('xp') || '10').trim();
+    const retos = (params.get('retos') || '0').trim();
+    const bitacoras = (params.get('bitacoras') || '0').trim();
+    const semanasRaw = (params.get('semanas') || '').trim();
+    const semanas = semanasRaw ? semanasRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const portfolioUrl = params.get('portfolio') || `https://github.com/edwinbermudez91/Fundamentos-Kubernetes/tree/main/aportes-comunidad/soluciones-retos/${encodeURIComponent(user)}`;
+    const linkedinUrl = (params.get('linkedin') || '').trim();
+    const redesRaw = (params.get('redes') || '').trim();
+    const extraRedes = redesRaw ? redesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    function formatSocialDisplay(url) {
+      return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/+$/, '');
+    }
+    function getSocialType(url) {
+      const l = url.toLowerCase();
+      if (l.includes('linkedin.com')) return 'linkedin';
+      if (l.includes('github.com')) return 'github';
+      if (l.includes('x.com') || l.includes('twitter.com')) return 'x';
+      if (l.includes('instagram.com')) return 'instagram';
+      if (l.includes('youtube.com')) return 'youtube';
+      return 'web';
+    }
+    const personalSocials = [
+      { type: 'github', url: `https://github.com/${user}`, display: `github.com/${user}` }
+    ];
+    if (linkedinUrl) {
+      personalSocials.push({ type: 'linkedin', url: linkedinUrl, display: formatSocialDisplay(linkedinUrl) });
+    }
+    extraRedes.forEach(u => {
+      personalSocials.push({ type: getSocialType(u), url: u, display: formatSocialDisplay(u) });
+    });
+
+    const VALID_STATES = new Set(['completado', 'progreso', 'bloqueado']);
+    const DEFAULT_WEEKS = ['semana-00', 'semana-01', 'semana-02', 'semana-03', 'semana-04', 'semana-05', 'semana-06'];
+    const badgesRaw = (params.get('badges') || '').trim();
+    const parsedBadges = badgesRaw
+      ? badgesRaw.split(',').map(item => {
+          const [wk, st] = item.split(':').map(v => (v || '').trim());
+          if (/^semana-\d{2}$/.test(wk) && VALID_STATES.has(st)) {
+            return { wk, state: st };
+          }
+          return null;
+        }).filter(Boolean)
+      : [];
+    const badgeList = parsedBadges.length > 0
+      ? parsedBadges
+      : DEFAULT_WEEKS.map(wk => ({ wk, state: 'bloqueado' }));
+
+    document.getElementById('btnBack').href = portfolioUrl;
+
+    const canvas = document.getElementById('card');
+    const ctx = canvas.getContext('2d');
+
+    function getRankPalette(r) {
+      if (r.includes('Capitán')) {
+        return { key: 'capitan', tag: '🥇 RANGO ORO • CAPITÁN K8S', c1: '#FEF08A', c2: '#D97706', bg: '#78350F' };
+      }
+      if (r.includes('Timonel')) {
+        return { key: 'timonel', tag: '🥈 RANGO PLATA • TIMONEL K8S', c1: '#F8FAFC', c2: '#94A3B8', bg: '#334155' };
+      }
+      return { key: 'marinero', tag: '🥉 RANGO BRONCE • MARINERO', c1: '#FDBA74', c2: '#EA580C', bg: '#7C2D12' };
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    let avatarImgLoaded = null;
+    let rankBadgeImg = null;
+    let cncfBadgeImg = null;
+    const weekBadgeImgs = {};
+
+    function fitText(text, maxWidth) {
+      if (ctx.measureText(text).width <= maxWidth) return text;
+      let out = text;
+      while (out.length > 10 && ctx.measureText(out + '…').width > maxWidth) {
+        out = out.slice(0, -1);
+      }
+      return out + '…';
+    }
+
+    function drawCard() {
+      const W = 1200, H = 630;
+      const palette = getRankPalette(rango);
+
+      // Background gradient
+      const bg = ctx.createLinearGradient(0, 0, W, H);
+      bg.addColorStop(0, '#070B14');
+      bg.addColorStop(0.55, '#0F172A');
+      bg.addColorStop(1, '#172554');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Subtle grid
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.05)';
+      ctx.lineWidth = 1;
+      for (let gx = 40; gx < W; gx += 40) {
+        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+      }
+      for (let gy = 40; gy < H; gy += 40) {
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+      }
+
+      // Outer accent border
+      const borderGrad = ctx.createLinearGradient(0, 0, W, 0);
+      borderGrad.addColorStop(0, '#38BDF8');
+      borderGrad.addColorStop(0.5, palette.c1);
+      borderGrad.addColorStop(1, '#2DD4BF');
+      ctx.strokeStyle = borderGrad;
+      ctx.lineWidth = 4;
+      roundRect(18, 18, W - 36, H - 36, 22);
+      ctx.stroke();
+
+      // Header bar matching banner-portafolio.svg
+      ctx.fillStyle = '#FDE047';
+      ctx.font = '800 13px system-ui, -apple-system, sans-serif';
+      ctx.fillText('CLOUD NATIVE MEDELLÍN (CNCF)  •  KUBECAFÉ', 56, 52);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 24px system-ui, -apple-system, sans-serif';
+      ctx.fillText('PORTAFOLIO CLOUD NATIVE & KUBERNETES', 56, 80);
+
+      const titleLineGrad = ctx.createLinearGradient(56, 90, 620, 90);
+      titleLineGrad.addColorStop(0, '#38BDF8');
+      titleLineGrad.addColorStop(0.5, '#FDE047');
+      titleLineGrad.addColorStop(1, 'rgba(45, 212, 191, 0)');
+      ctx.fillStyle = titleLineGrad;
+      ctx.fillRect(56, 90, 564, 2.5);
+
+      // Rank pill (top right)
+      ctx.font = '800 15px system-ui, -apple-system, sans-serif';
+      const rankWidth = ctx.measureText(palette.tag).width + 40;
+      const rankX = W - 56 - rankWidth;
+      ctx.fillStyle = palette.bg;
+      roundRect(rankX, 46, rankWidth, 34, 17);
+      ctx.fill();
+      ctx.strokeStyle = palette.c1;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(palette.tag, rankX + 20, 68);
+
+      // Avatar circle
+      const avX = 110, avY = 172, avR = 50;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(avX, avY, avR, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      if (avatarImgLoaded) {
+        ctx.drawImage(avatarImgLoaded, avX - avR, avY - avR, avR * 2, avR * 2);
+      } else {
+        const avBg = ctx.createLinearGradient(avX - avR, avY - avR, avX + avR, avY + avR);
+        avBg.addColorStop(0, '#0284C7');
+        avBg.addColorStop(1, '#7C3AED');
+        ctx.fillStyle = avBg;
+        ctx.fillRect(avX - avR, avY - avR, avR * 2, avR * 2);
+        const initials = nombre.split(/\s+/).slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || 'K8';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '800 38px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(initials, avX, avY + 13);
+        ctx.textAlign = 'left';
+      }
+      ctx.restore();
+      ctx.strokeStyle = palette.c1;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(avX, avY, avR + 2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Name, Handle, Role, Social URLs
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 38px system-ui, -apple-system, sans-serif';
+      ctx.fillText(fitText(nombre, 705), 192, 134);
+
+      ctx.fillStyle = '#38BDF8';
+      ctx.font = '700 20px system-ui, -apple-system, sans-serif';
+      ctx.fillText(`@${user}`, 192, 163);
+
+      ctx.fillStyle = '#CBD5E1';
+      ctx.font = '600 19px system-ui, -apple-system, sans-serif';
+      ctx.fillText(fitText(rol, 705), 192, 190);
+
+      // Vector brand icon helper for social URLs
+      const GITHUB_PATH = new Path2D('M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12');
+      function drawBrandIcon(type, x, y, size) {
+        ctx.save();
+        if (type === 'github') {
+          ctx.translate(x, y);
+          ctx.scale(size / 24, size / 24);
+          ctx.fillStyle = '#F8FAFC';
+          ctx.fill(GITHUB_PATH);
+        } else if (type === 'linkedin') {
+          ctx.fillStyle = '#0A66C2';
+          roundRect(x, y, size, size, size * 0.22);
+          ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `900 ${Math.round(size * 0.62)}px system-ui, -apple-system, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('in', x + size / 2, y + size * 0.54);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        } else if (type === 'x') {
+          ctx.fillStyle = '#0F172A';
+          roundRect(x, y, size, size, size * 0.22);
+          ctx.fill();
+          ctx.strokeStyle = '#64748B';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `800 ${Math.round(size * 0.65)}px system-ui, -apple-system, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('𝕏', x + size / 2, y + size * 0.53);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        } else if (type === 'instagram') {
+          ctx.fillStyle = '#E4405F';
+          roundRect(x, y, size, size, size * 0.25);
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(x + size / 2, y + size / 2, size * 0.22, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (type === 'youtube') {
+          ctx.fillStyle = '#FF0000';
+          roundRect(x, y, size, size, size * 0.22);
+          ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.moveTo(x + size * 0.38, y + size * 0.28);
+          ctx.lineTo(x + size * 0.72, y + size * 0.5);
+          ctx.lineTo(x + size * 0.38, y + size * 0.72);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#0284C7';
+          ctx.beginPath();
+          ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `700 ${Math.round(size * 0.6)}px system-ui, -apple-system, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('🌐', x + size / 2, y + size * 0.54);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        }
+        ctx.restore();
+      }
+
+      let socialFontSize = 14.5;
+      const iconSize = 16;
+      const iconGap = 7;
+      const itemGap = 20;
+      function measureSocialsWidth(fs) {
+        ctx.font = `600 ${fs}px system-ui, -apple-system, sans-serif`;
+        return personalSocials.reduce((sum, s, i) => {
+          return sum + iconSize + iconGap + ctx.measureText(s.display).width + (i > 0 ? itemGap : 0);
+        }, 0);
+      }
+      while (socialFontSize > 10 && measureSocialsWidth(socialFontSize) > 705) {
+        socialFontSize -= 0.5;
+      }
+      ctx.font = `600 ${socialFontSize}px system-ui, -apple-system, sans-serif`;
+      let sx = 192;
+      personalSocials.forEach((s, i) => {
+        if (i > 0) {
+          ctx.fillStyle = '#475569';
+          ctx.fillText('•', sx - itemGap / 2 - 2, 219);
+        }
+        drawBrandIcon(s.type, sx, 219 - iconSize + 3, iconSize);
+        ctx.fillStyle = '#7DD3FC';
+        ctx.fillText(s.display, sx + iconSize + iconGap, 219);
+        sx += iconSize + iconGap + ctx.measureText(s.display).width + itemGap;
+      });
+
+      // CNCF Medellín & Rank SVG Insignias (right of profile)
+      if (cncfBadgeImg) {
+        ctx.drawImage(cncfBadgeImg, W - 56 - 106 - 14 - 106, 102, 106, 118);
+      }
+      if (rankBadgeImg) {
+        ctx.drawImage(rankBadgeImg, W - 56 - 106, 102, 106, 118);
+      }
+
+      // 3 KPI boxes
+      const kpis = [
+        { label: '⚡ PUNTAJE VERIFICADO', value: `${xp} XP`, color: '#10B981' },
+        { label: '🛠️ RETOS RESUELTOS', value: `${retos}`, color: '#38BDF8' },
+        { label: '✍️ BITÁCORAS TÉCNICAS', value: `${bitacoras}`, color: '#C084FC' }
+      ];
+      const boxW = 342, boxH = 108, gap = 31;
+      kpis.forEach((k, i) => {
+        const bx = 56 + i * (boxW + gap);
+        const by = 242;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        roundRect(bx, by, boxW, boxH, 16);
+        ctx.fill();
+        ctx.strokeStyle = k.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = '700 14px system-ui, -apple-system, sans-serif';
+        ctx.fillText(k.label, bx + 22, by + 34);
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '900 44px system-ui, -apple-system, sans-serif';
+        ctx.fillText(k.value, bx + 22, by + 86);
+      });
+
+      // Insignias KubeCafé strip (7 SVGs)
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '700 14px system-ui, -apple-system, sans-serif';
+      ctx.fillText('🏅 INSIGNIAS KUBECAFÉ VERIFICADAS:', 56, 384);
+
+      const badgeCount = Math.min(badgeList.length, 7);
+      const badgeW = 114;
+      const badgeH = 127;
+      const availW = W - 112;
+      const badgeGap = badgeCount > 1 ? (availW - badgeCount * badgeW) / (badgeCount - 1) : 0;
+
+      badgeList.slice(0, 7).forEach((b, idx) => {
+        const bx = 56 + idx * (badgeW + badgeGap);
+        const by = 400;
+        const bImg = weekBadgeImgs[b.wk];
+        if (bImg) {
+          ctx.save();
+          if (b.state === 'bloqueado') ctx.globalAlpha = 0.55;
+          ctx.drawImage(bImg, bx, by, badgeW, badgeH);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.1)';
+          roundRect(bx, by, badgeW, badgeH, 12);
+          ctx.fill();
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      });
+
+      // Footer with student's personal portfolio URL
+      ctx.fillStyle = '#64748B';
+      ctx.fillRect(56, 548, W - 112, 1);
+
+      const verifiedText = 'VERIFICADO • CLOUD NATIVE MEDELLÍN ✓';
+      ctx.font = '800 13.5px system-ui, -apple-system, sans-serif';
+      const verifiedWidth = ctx.measureText(verifiedText).width;
+      const maxUrlWidth = W - 112 - verifiedWidth - 24;
+
+      const cleanPortfolioUrl = `🔗 ${portfolioUrl.replace(/^https?:\/\//, '')}`;
+      let urlFontSize = 14.5;
+      ctx.font = `700 ${urlFontSize}px system-ui, -apple-system, sans-serif`;
+      while (urlFontSize > 10 && ctx.measureText(cleanPortfolioUrl).width > maxUrlWidth) {
+        urlFontSize -= 0.5;
+        ctx.font = `700 ${urlFontSize}px system-ui, -apple-system, sans-serif`;
+      }
+      ctx.fillStyle = '#38BDF8';
+      ctx.fillText(cleanPortfolioUrl, 56, 582);
+
+      ctx.fillStyle = '#2DD4BF';
+      ctx.font = '800 13.5px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(verifiedText, W - 56, 582);
+      ctx.textAlign = 'left';
+    }
+
+    // Load same-origin SVG insignias
+    const rankKey = getRankPalette(rango).key;
+    const rImg = new Image();
+    rImg.onload = () => { rankBadgeImg = rImg; drawCard(); };
+    rImg.src = `./insignias/rango-${rankKey}.svg`;
+
+    const cImg = new Image();
+    cImg.onload = () => { cncfBadgeImg = cImg; drawCard(); };
+    cImg.src = './insignias/cncf-medellin.svg';
+
+    badgeList.slice(0, 7).forEach(b => {
+      const wImg = new Image();
+      wImg.onload = () => { weekBadgeImgs[b.wk] = wImg; drawCard(); };
+      wImg.src = `./insignias/${b.wk}-${b.state}.svg`;
+    });
+
+    // Load GitHub avatar directly from avatars.githubusercontent.com (avoids github.com 302 CORS block)
+    function loadAvatarWithCors(url, onFail) {
+      const av = new Image();
+      av.crossOrigin = 'anonymous';
+      av.onload = () => { avatarImgLoaded = av; drawCard(); };
+      av.onerror = () => { if (onFail) onFail(); else { avatarImgLoaded = null; drawCard(); } };
+      av.src = url;
+    }
+
+    loadAvatarWithCors(`https://avatars.githubusercontent.com/${encodeURIComponent(user)}?s=200`, async () => {
+      try {
+        const res = await fetch(`https://api.github.com/users/${encodeURIComponent(user)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.avatar_url) {
+            loadAvatarWithCors(data.avatar_url, null);
+            return;
+          }
+        }
+      } catch {}
+      avatarImgLoaded = null;
+      drawCard();
+    });
+    drawCard();
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2600);
+    }
+
+    document.getElementById('btnDownload').addEventListener('click', () => {
+      try {
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `portafolio-${user}-kubecafe.png`;
+        a.click();
+        showToast('✅ Tarjeta PNG descargada');
+      } catch (e) {
+        avatarImgLoaded = null;
+        drawCard();
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `portafolio-${user}-kubecafe.png`;
+        a.click();
+        showToast('✅ Tarjeta PNG descargada');
+      }
+    });
+
+    document.getElementById('btnCopy').addEventListener('click', async () => {
+      const B = '⠀';
+      const postText = [
+        `☸️ ¡Sigo construyendo mi Portafolio Práctico de Docker y Kubernetes en el workshop "De Cero a Capitán en Kubernetes" con la comunidad Cloud Native Medellín (CNCF)! 🏔️☕`,
+        B,
+        `🎖️ Rango actual: ${rango} (${xp} XP)`,
+        B,
+        `📂 Mi Portafolio de Laboratorios y Bitácora verificada:`,
+        portfolioUrl,
+        B,
+        `Agradecimientos a @Cloud Native Colombia (Armenia, Bogota, Cali, Medellin) por este espacio de formación abierta:`,
+        B,
+        `🏢 LinkedIn: https://www.linkedin.com/company/cloud-native-colombia/`,
+        `📸 Instagram: https://www.instagram.com/colombiacloudnative/`,
+        `▶️ YouTube: https://www.youtube.com/@CloudNativeColombia`,
+        `🔗 Capítulo oficial CNCF: https://ocgroups.dev/cncf/group/2majk4r`,
+        B,
+        `#Kubernetes #Docker #CloudNative #DevOps #KubeCafe #CNCFMedellin #OpenSource`
+      ].join('\n');
+
+      try {
+        await navigator.clipboard.writeText(postText);
+        showToast('📋 ¡Texto copiado! Pégalo en LinkedIn');
+      } catch {
+        prompt('Copia este texto para LinkedIn:', postText);
+      }
+    });
+  </script>
+</body>
+</html>

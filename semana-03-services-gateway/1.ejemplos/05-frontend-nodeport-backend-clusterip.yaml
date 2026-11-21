@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-backend
+  labels:
+    app: api-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-backend
+  template:
+    metadata:
+      labels:
+        app: api-backend
+    spec:
+      containers:
+        - name: api
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              cat <<EOF > /etc/nginx/conf.d/default.conf
+              server {
+                listen 80;
+                charset utf-8;
+                default_type application/json;
+                location /api {
+                  return 200 '{"cafeteria":"KubeCafe","backend_pod":"$HOSTNAME"}\n';
+                }
+              }
+              EOF
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-backend-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: api-backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-frontend-conf
+data:
+  default.conf: |
+    server {
+      listen 80;
+      charset utf-8;
+      root /usr/share/nginx/html;
+      index index.html;
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+      location /api {
+        proxy_pass http://api-backend-svc.default.svc.cluster.local;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+  labels:
+    app: web-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-frontend
+  template:
+    metadata:
+      labels:
+        app: web-frontend
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              cat <<EOF > /usr/share/nginx/html/index.html
+              <!DOCTYPE html>
+              <html lang="es">
+              <head><meta charset="UTF-8" /><title>KubeCafé Frontend -> Backend</title></head>
+              <body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070B14;color:#F8FAFC;font-family:system-ui,sans-serif;">
+                <div style="background:#0F172A;border:1px solid #06B6D4;border-radius:16px;padding:2rem;max-width:540px;text-align:center;">
+                  <h2>☕ KubeCafé: Frontend (NodePort :30090) ➔ Backend (ClusterIP)</h2>
+                  <div style="background:#020617;border:1px solid #1E293B;border-radius:8px;padding:0.75rem;font-family:monospace;color:#38BDF8;margin-bottom:0.75rem;">
+                    Frontend Pod: <b>$HOSTNAME</b>
+                  </div>
+                  <p style="color:#94A3B8;font-size:0.9rem;">Al consultar <code>/api</code>, este Pod llama al FQDN <code>api-backend-svc.default.svc.cluster.local</code></p>
+                  <button onclick="callApi()" style="padding:10px 16px;border:none;border-radius:8px;background:#06B6D4;color:#020617;font-weight:700;cursor:pointer;">🚀 Llamar a /api</button>
+                  <button onclick="location.reload()" style="margin-left:8px;padding:10px 14px;border:1px solid #334155;border-radius:8px;background:#1E293B;color:#F8FAFC;font-weight:600;cursor:pointer;">🔄 Recargar Frontend</button>
+                  <pre id="out" style="margin-top:1rem;background:#020617;padding:1rem;border-radius:8px;color:#34D399;text-align:left;max-height:200px;overflow:auto;">Haz clic en "Llamar a /api"...</pre>
+                  <script>
+                    async function callApi() {
+                      const r = await fetch("/api");
+                      const txt = (await r.text()).trim();
+                      const out = document.getElementById("out");
+                      out.textContent = txt + "\n" + (out.textContent.startsWith("Haz clic") ? "" : out.textContent);
+                    }
+                  </script>
+                </div>
+              </body>
+              </html>
+              EOF
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: conf
+          configMap:
+            name: nginx-frontend-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-frontend-svc
+spec:
+  type: NodePort
+  selector:
+    app: web-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30090

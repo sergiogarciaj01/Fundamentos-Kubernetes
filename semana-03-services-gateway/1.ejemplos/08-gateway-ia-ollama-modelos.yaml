@@ -1,0 +1,198 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-modelo-rapido
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama-rapido
+  template:
+    metadata:
+      labels:
+        app: ollama-rapido
+    spec:
+      containers:
+        - name: ollama-mock
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo '{"model":"llama3.2:1b","response":"☕ Espresso rápido listo (Modelo ligero en ollama-llama-svc)"}' > /usr/share/nginx/html/index.html
+              sed -i 's/listen       80;/listen 11434;/' /etc/nginx/conf.d/default.conf
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 11434
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-llama-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: ollama-rapido
+  ports:
+    - port: 11434
+      targetPort: 11434
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-modelo-avanzado
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama-avanzado
+  template:
+    metadata:
+      labels:
+        app: ollama-avanzado
+    spec:
+      containers:
+        - name: ollama-mock
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo '{"model":"gemma2:2b","response":"🎓 Análisis profundo de Barista IA (Modelo avanzado en ollama-gemma-svc)"}' > /usr/share/nginx/html/index.html
+              sed -i 's/listen       80;/listen 11434;/' /etc/nginx/conf.d/default.conf
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 11434
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-gemma-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: ollama-avanzado
+  ports:
+    - port: 11434
+      targetPort: 11434
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ia-frontend-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="es">
+    <body style="font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:2rem">
+      <h2>🤖☕ KubeCafé Barista IA — Selector de Modelos (AI Gateway)</h2>
+      <button onclick="ask('/ia/rapido')">⚡ Modelo Rápido (llama3.2:1b)</button>
+      <button onclick="ask('/ia/avanzado')">🧠 Modelo Avanzado (gemma2:2b)</button>
+      <button onclick="ask('/ia/auto')">⚖️ Auto Balanceado (70% / 30%)</button>
+      <pre id="out" style="margin-top:1rem;background:#020617;padding:1rem;border-radius:8px"></pre>
+      <script>
+        async function ask(path) {
+          const r = await fetch(path);
+          document.getElementById('out').textContent = await r.text();
+        }
+      </script>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ia-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ia-frontend
+  template:
+    metadata:
+      labels:
+        app: ia-frontend
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: html
+          configMap:
+            name: ia-frontend-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ia-frontend-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: ia-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kubecafe-ia-route
+spec:
+  parentRefs:
+    - name: kubecafe-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ia/rapido
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: ollama-llama-svc
+          port: 11434
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ia/avanzado
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: ollama-gemma-svc
+          port: 11434
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ia/auto
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: ollama-llama-svc
+          port: 11434
+          weight: 70
+        - name: ollama-gemma-svc
+          port: 11434
+          weight: 30
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ia-frontend-svc
+          port: 80

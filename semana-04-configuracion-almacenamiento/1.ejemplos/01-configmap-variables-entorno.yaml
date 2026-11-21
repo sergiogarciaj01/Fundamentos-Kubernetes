@@ -1,0 +1,32 @@
+# 🧂 Lab 1: ConfigMap inyectado como Variables de Entorno (envFrom / valueFrom)
+# Analogía KubeCafé: Las especias y configuración del menú separadas de la imagen del contenedor.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubecafe-config
+data:
+  NOMBRE_LOCAL: "KubeCafé Medellín"
+  MONEDA: "COP"
+  PRECIO_TINTO: "3500"
+  MODO_DEBUG: "false"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: barista-config-env
+  labels:
+    app: barista-config
+spec:
+  containers:
+    - name: barista
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - |
+          echo "=== Configuración de $NOMBRE_LOCAL ==="
+          echo "Moneda: $MONEDA | Precio Tinto: $PRECIO_TINTO | Debug: $MODO_DEBUG"
+          sleep 3600
+      envFrom:
+        - configMapRef:
+            name: kubecafe-config

@@ -1,0 +1,28 @@
+# ==============================================================================
+# EJEMPLO 03: Descubrimiento por DNS Interno (CoreDNS)
+# Analogía: Llamar a "cocina-svc" por su nombre sin memorizar su IP cambiante.
+# ==============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubecafe-salon
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mesero-tester
+  namespace: kubecafe-salon
+  labels:
+    role: tester
+spec:
+  containers:
+    - name: curl-client
+      image: curlimages/curl:8.11.1
+      command: ["sleep", "3600"]
+      resources:
+        requests:
+          cpu: "20m"
+          memory: "32Mi"
+        limits:
+          cpu: "50m"
+          memory: "64Mi"

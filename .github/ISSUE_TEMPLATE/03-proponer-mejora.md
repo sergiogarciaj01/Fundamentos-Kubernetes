@@ -12,7 +12,7 @@ assignees: ''
 
 ### 🎯 ¿Para qué semana o módulo aplica?
 - **Semana:** (Semana 1 a 6)
-- **Tema:** (Pods, Deployments, Services, Ingress, RBAC, etc.)
+- **Tema:** (Pods, Deployments, Services, Gateway API, RBAC, etc.)
 
 ### 🤝 ¿Te gustaría implementar esta propuesta tú mismo vía Pull Request?
 - [ ] ¡Sí! Me gustaría crear el PR para subir de nivel en `ASISTENTES.md`.

@@ -1,0 +1,1306 @@
+0<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Interactivo KubeCafé — Las 7 Semanas de Docker y Kubernetes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            k8s: {
+              blue: '#326CE5',
+              cyber: '#00F0FF',
+              term: '#10B981',
+              amber: '#F59E0B',
+              purple: '#A855F7',
+              bg: '#070B14',
+              panel: '#0F172A',
+              border: '#1E293B'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #070B14;
+      background-image:
+        radial-gradient(circle at 12% 18%, rgba(50, 108, 229, 0.14) 0%, transparent 38%),
+        radial-gradient(circle at 88% 82%, rgba(16, 185, 129, 0.10) 0%, transparent 38%),
+        linear-gradient(to right, rgba(30, 41, 59, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.22) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+      color: #F8FAFC;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid #1E293B;
+      transition: all 0.28s ease;
+    }
+    .node-active {
+      border-color: #00F0FF !important;
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.35), inset 0 0 12px rgba(50, 108, 229, 0.25);
+    }
+    .pulse-dot {
+      animation: pulseGlow 1.6s infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.25); }
+    }
+    .flow-line {
+      stroke-dasharray: 6 6;
+      animation: flowDash 1s linear infinite;
+    }
+    @keyframes flowDash {
+      to { stroke-dashoffset: -12; }
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(50, 108, 229, 0.35), rgba(0, 240, 255, 0.18));
+      border-color: #00F0FF;
+      color: #FFFFFF;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090D16; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #326CE5; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-30">
+    <!-- Top Unified View Tabs (Same Route Switcher) -->
+    <div id="topModeSwitcher" class="bg-slate-950 border-b border-slate-800/90 px-4 py-2">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+          <button id="mainTabPanel" onclick="switchMainView('panel')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20">
+            ☕ Panel Interactivo 360° (7 Semanas)
+          </button>
+          <button id="mainTabSim" onclick="switchMainView('simulador')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-300 hover:text-white">
+            🎛️ Simulador del Café (Arquitectura Clúster)
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="toggleAnalogyBtn" onclick="toggleAnalogyMode()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition">
+            ☕ Modo Dual: Técnico + KubeCafé
+          </button>
+          <a href="https://github.com/edwinbermudez91/Fundamentos-Kubernetes" target="_top" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-500/40 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 transition">
+            🏠 Volver al Repo
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div id="panelHeaderSub" class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center text-xl shadow-lg shadow-blue-500/20">☕</div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">
+            KubeCafé <span class="text-cyan-400">Panel Interactivo 360°</span>
+          </h1>
+          <p class="text-xs text-slate-400">De Docker a Helm · Pod, ReplicaSet, Deployment, Services, Gateway (Cilium), Storage & Seguridad</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Week Selector Tabs (Semanas 00 - 06) -->
+    <div id="weekTabsBar" class="max-w-7xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto">
+      <button onclick="selectWeek(0)" id="tab-0" class="tab-btn active shrink-0 px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/70 text-xs font-semibold text-slate-300 hover:border-slate-500 transition">
+        🐳 S00 · Docker
+      </button>
+      <button onclick="selectWeek(1)" id="tab-1" class="tab-btn shrink-0 px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/70 text-xs font-semibold text-slate-300 hover:border-slate-500 transition">
+        🌱 S01 · Pod & Arquitectura
+      </button>
+      <button onclick="selectWeek(2)" id="tab-2" class="tab-btn shrink-0 px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/70 text-xs font-semibold text-slate-300 hover:border-slate-500 transition">
+        🔄 S02 · ReplicaSet & Deployment
+      </button>
+      <button onclick="selectWeek(3)" id="tab-3" class="tab-btn shrink-0 px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/70 text-xs font-semibold text-slate-300 hover:border-slate-500 transition">
+        🌐 S03 · Services & Gateway (Cilium)
+      </button>
+      <button onclick="selectWeek(4)" id="tab-4" class="tab-btn shrink-0 px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/70 text-xs font-semibold text-slate-300 hover:border-slate-500 transition">
+        💾 S04 · Config, Secret & Storage
+      </button>
+      <button onclick="selectWeek(5)" id="tab-5" class="tab-btn shrink-0 px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/70 text-xs font-semibold text-slate-300 hover:border-slate-500 transition">
+        🛡️ S05 · Probes, Limits & RBAC
+      </button>
+      <button onclick="selectWeek(6)" id="tab-6" class="tab-btn shrink-0 px-3 py-2 rounded-lg border border-slate-700/80 bg-slate-900/70 text-xs font-semibold text-slate-300 hover:border-slate-500 transition">
+        🎓 S06 · Helm Chart Franquicia
+      </button>
+    </div>
+  </header>
+
+  <!-- Embedded Simulador del Café View (Same Route) -->
+  <section id="simEmbedContainer" class="hidden flex-1 w-full flex flex-col">
+    <iframe id="simIframe" src="" class="w-full flex-1 border-0" style="min-height: calc(100vh - 54px);"></iframe>
+  </section>
+
+  <!-- Main Workspace -->
+  <main id="panelMain" class="max-w-7xl w-full mx-auto px-4 py-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+    <!-- Left & Center: Interactive Visual Stage (8 cols) -->
+    <section class="lg:col-span-8 flex flex-col gap-4">
+
+      <!-- Week Banner & Analogy -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <span id="weekBadge" class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 mb-2">
+              Semana 00 · Contenedores
+            </span>
+            <h2 id="weekTitle" class="text-xl sm:text-2xl font-extrabold text-white"></h2>
+            <p id="weekDesc" class="text-sm text-slate-300 mt-1"></p>
+          </div>
+          <div id="analogyBox" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 max-w-sm">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1">☕ Analogía en KubeCafé</div>
+            <p id="weekAnalogy" class="text-xs text-amber-100/90 leading-relaxed"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Canvas -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex-1 flex flex-col gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot"></span>
+            <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider">Simulación Interactiva en Vivo</h3>
+            <select id="speedMode" onchange="setSpeedMode(this.value)" class="ml-2 text-[11px] bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-cyan-300 focus:outline-none">
+              <option value="950">⚡ Auto (Normal)</option>
+              <option value="1650">🐢 Auto (Lento)</option>
+              <option value="manual">⏯️ Paso a Paso Manual</option>
+            </select>
+          </div>
+          <div id="controlsBar" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Animated Process Stepper -->
+        <div id="processStepper" class="hidden rounded-xl bg-slate-900/90 border border-cyan-500/30 p-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-300">⚡ Proceso en Ejecución</span>
+            <div class="flex items-center gap-2">
+              <span id="processText" class="text-xs font-medium text-amber-300"></span>
+              <button id="nextStepBtn" onclick="advanceManualStep()" class="hidden px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-500/40 border border-cyan-400 text-white text-[11px] font-bold transition">➡️ Siguiente Paso</button>
+            </div>
+          </div>
+          <div id="processNodes" class="flex flex-wrap items-center gap-2 text-xs"></div>
+        </div>
+
+        <!-- Active Command Banner -->
+        <div id="activeCmdBar" class="hidden rounded-xl bg-slate-950 border border-emerald-500/35 px-3 py-2 flex items-center justify-between gap-2">
+          <div class="font-mono text-xs text-emerald-300 overflow-x-auto whitespace-nowrap">
+            <span class="text-slate-500 select-none">$ </span><span id="activeCmdText"></span>
+          </div>
+          <button onclick="copyActiveCmd()" class="shrink-0 text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Copiar</button>
+        </div>
+
+        <!-- Visual Diagram Area -->
+        <div id="visualStage" class="min-h-[300px] rounded-xl bg-slate-950/70 border border-slate-800/90 p-4 flex flex-col justify-center"></div>
+
+        <!-- Step-by-step explanation pills -->
+        <div id="flowSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"></div>
+      </div>
+
+    </section>
+
+    <!-- Right: Live YAML + Terminal Logs (4 cols) -->
+    <aside class="lg:col-span-4 flex flex-col gap-4">
+
+      <!-- Live YAML Inspector -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-cyan-300">📄 Manifiesto / Código en Vivo</span>
+          <button onclick="copyYaml()" class="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Copiar</button>
+        </div>
+        <pre id="yamlPreview" class="text-[11px] leading-relaxed font-mono bg-slate-950/90 border border-slate-800 rounded-xl p-3 text-emerald-300 overflow-x-auto max-h-64"></pre>
+      </div>
+
+      <!-- Simulated Cluster Console -->
+      <div class="glass-card rounded-2xl p-4 flex-1 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">💻 Bitácora del Clúster (Eventos)</span>
+          <button onclick="clearLogs()" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 transition">Limpiar</button>
+        </div>
+        <div id="consoleLogs" class="font-mono text-[11px] bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex-1 min-h-[200px] max-h-72 overflow-y-auto space-y-1.5 text-slate-300"></div>
+      </div>
+
+    </aside>
+  </main>
+
+  <script>
+    // Global Simulation State
+    const state = {
+      week: 0,
+      showAnalogy: true,
+      dockerStep: 0, // 0: Dockerfile, 1: Build Image, 2: Running Container
+      dockerRootless: true,
+      podState: 'Running', // Pending, Running, Sidecar
+      podStage: -1, // 0: apiserver, 1: etcd, 2: controller, 3: scheduler, 4: kubelet
+      speedMode: '950', // '950' | '1650' | 'manual'
+      manualQueue: null,
+      manualIdx: 0,
+      replicas: 3,
+      version: 'v1.0',
+      revision: 1,
+      pods: [
+        { id: 'barista-a1', ver: 'v1.0', healthy: true },
+        { id: 'barista-b2', ver: 'v1.0', healthy: true },
+        { id: 'barista-c3', ver: 'v1.0', healthy: true }
+      ],
+      netRoute: '/cocina', // '/cocina' | '/menu' | 'nodeport' | 'dns'
+      netStage: -1, // -1 idle, 0..3 active hop
+      netLabelBroken: false,
+      appColor: 'blue',
+      secretRevealed: false,
+      pvcOrders: 42,
+      pvcPodRestarting: false,
+      s04Active: 'cm', // 'cm' | 'secret' | 'pvc'
+      probeHealthy: true,
+      s05Tab: 'probes', // 'probes' | 'resources' | 'rbac'
+      startupDone: true,
+      livenessRestarts: 0,
+      livenessAlive: true,
+      resLoad: 'normal', // 'normal' | 'cpu_throttle' | 'oom'
+      rbacRole: 'viewer', // 'viewer' | 'editor' | 'admin'
+      rbacResult: null,
+      helmStage: 0, // 0..4
+      helmEnv: 'prod', // 'dev' | 'prod'
+      helmRev: 1,
+      timers: []
+    };
+
+    function clearTimers() {
+      state.timers.forEach(t => clearTimeout(t));
+      state.timers = [];
+    }
+
+    function showCmd(cmd) {
+      const bar = document.getElementById('activeCmdBar');
+      const txt = document.getElementById('activeCmdText');
+      bar.classList.remove('hidden');
+      txt.textContent = cmd;
+      log(`$ ${cmd}`, 'cmd');
+    }
+
+    function copyActiveCmd() {
+      const txt = document.getElementById('activeCmdText').textContent;
+      navigator.clipboard.writeText(txt).then(() => log('📋 Comando copiado al portapapeles.', 'ok'));
+    }
+
+    function setSpeedMode(val) {
+      state.speedMode = val;
+      log(`🎛️ Modo de simulación: <b>${val === 'manual' ? 'Paso a Paso Manual' : val === '1650' ? 'Automático Lento' : 'Automático Normal'}</b>`, 'info');
+    }
+
+    function renderStepperStep(steps, idx, onDone) {
+      const text = document.getElementById('processText');
+      const nodes = document.getElementById('processNodes');
+      const nextBtn = document.getElementById('nextStepBtn');
+      const step = steps[idx];
+      text.textContent = step.msg;
+      nodes.innerHTML = steps.map((s, i) => `
+        <div class="px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all ${
+          i < idx ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300' :
+          i === idx ? 'border-cyan-400 bg-cyan-500/25 text-white shadow-md shadow-cyan-500/20 scale-105' :
+          'border-slate-700 bg-slate-950 text-slate-500'
+        }">${i < idx ? '✅ ' : i === idx ? '⏳ ' : ''}${s.label}</div>
+        ${i < steps.length - 1 ? '<span class="text-slate-600">➔</span>' : ''}
+      `).join('');
+      if (step.action) step.action();
+      if (state.speedMode === 'manual') {
+        nextBtn.classList.toggle('hidden', idx >= steps.length - 1);
+      } else {
+        nextBtn.classList.add('hidden');
+      }
+      if (idx === steps.length - 1 && onDone) onDone();
+    }
+
+    function advanceManualStep() {
+      if (!state.manualQueue) return;
+      state.manualIdx += 1;
+      if (state.manualIdx < state.manualQueue.steps.length) {
+        renderStepperStep(state.manualQueue.steps, state.manualIdx, state.manualQueue.onDone);
+      }
+    }
+
+    function runProcess(steps, onDone, cmd) {
+      clearTimers();
+      if (cmd) showCmd(cmd);
+      const box = document.getElementById('processStepper');
+      box.classList.remove('hidden');
+
+      if (state.speedMode === 'manual') {
+        state.manualQueue = { steps, onDone };
+        state.manualIdx = 0;
+        renderStepperStep(steps, 0, onDone);
+        return;
+      }
+
+      document.getElementById('nextStepBtn').classList.add('hidden');
+      const delay = parseInt(state.speedMode, 10) || 950;
+      steps.forEach((_, idx) => {
+        const t = setTimeout(() => renderStepperStep(steps, idx, onDone), idx * delay);
+        state.timers.push(t);
+      });
+    }
+
+    const WEEKS = [
+      {
+        badge: 'Semana 00 · Fundamentos de Docker',
+        title: 'De Código a Contenedor (Multi-Stage & Rootless)',
+        desc: 'Cómo pasamos de un Dockerfile con código fuente a una imagen OCI ligera y segura corriendo como contenedor.',
+        analogy: 'El grano crudo (código) se tuesta siguiendo la receta (Dockerfile), se empaca en una bolsa sellada inmutable (Imagen) y se prepara en una taza (Contenedor).',
+        steps: [
+          { t: '1. Dockerfile', d: 'Receta declarativa + Multi-stage build para reducir tamaño (~130 MB).' },
+          { t: '2. Imagen OCI', d: 'Artefacto inmutable en capas con usuario no-root (appuser).' },
+          { t: '3. Contenedor', d: 'Proceso aislado corriendo con puertos mapeados (-p 8000:8000).' }
+        ]
+      },
+      {
+        badge: 'Semana 01 · Arquitectura y Pods',
+        title: 'Control Plane, Worker Nodes y tu Primer Pod',
+        desc: 'El API Server recibe tu YAML, el Scheduler elige el Worker Node y el kubelet levanta el Pod.',
+        analogy: 'La Gerencia (Control Plane) recibe el pedido en YAML, asigna una Mesa de Barismo (Worker Node) y el Barista (kubelet) sirve la Bandeja (Pod).',
+        steps: [
+          { t: '1. API Server & etcd', d: 'Valida el manifiesto YAML y guarda el estado deseado.' },
+          { t: '2. Scheduler', d: 'Elige el Worker Node con CPU/RAM disponible.' },
+          { t: '3. kubelet & Pod', d: 'Crea el Pod (1 o más contenedores compartiendo red localhost).' }
+        ]
+      },
+      {
+        badge: 'Semana 02 · Deployments y Auto-Curación',
+        title: 'ReplicaSet, Self-Healing, Rolling Update y Rollback',
+        desc: 'Nunca despliegues Pods sueltos. El Deployment gestiona ReplicaSets para mantener tus réplicas vivas y actualizar sin caídas.',
+        analogy: 'El Supervisor de Barra (ReplicaSet) vigila que siempre haya N baristas activos. Si uno falla, contrata otro en segundos; si cambia la receta, los releva uno a uno.',
+        steps: [
+          { t: '1. Self-Healing', d: 'Si un Pod muere o se borra, el ReplicaSet crea uno nuevo al instante.' },
+          { t: '2. Rolling Update', d: 'Crea Pods v2.0 poco a poco (maxSurge) sin apagar todo el servicio.' },
+          { t: '3. Rollback', d: 'Si v2.0 falla, `kubectl rollout undo` vuelve a v1.0 en segundos.' }
+        ]
+      },
+      {
+        badge: 'Semana 03 · Redes en K8s',
+        title: 'Services, EndpointSlices, CoreDNS y Gateway API (Cilium)',
+        desc: 'Los Pods cambian de IP al reiniciarse. Services da una IP estable, EndpointSlices rastrea los Pods y Cilium Gateway API enruta el tráfico HTTP.',
+        analogy: 'La Puerta Principal (Gateway Cilium) y la Recepcionista (HTTPRoute) envían cada pedido al Mesero (Service) correcto, quien sabe en qué mesa está cada barista (EndpointSlices).',
+        steps: [
+          { t: '1. Gateway API (Cilium)', d: 'Puerta única HTTP/HTTPS que evalúa rutas (/cocina, /menu).' },
+          { t: '2. Service & CoreDNS', d: 'ClusterIP interno o NodePort (30080) resoluble por nombre DNS.' },
+          { t: '3. EndpointSlices', d: 'Lista dinámica y escalable de IPs de Pods sanos detrás del Service.' }
+        ]
+      },
+      {
+        badge: 'Semana 04 · Configuración y Almacenamiento',
+        title: 'ConfigMaps, Secrets y Volúmenes Persistentes (PV/PVC)',
+        desc: 'Separa la configuración y credenciales de la imagen del contenedor, y guarda los datos en almacenamiento que sobrevive a reinicios.',
+        analogy: 'Las especias (ConfigMap) cambian el sabor sin re-tostar el grano; la receta secreta va en Caja Fuerte (Secret) y los pedidos se guardan en la Bodega (PV/PVC).',
+        steps: [
+          { t: '1. ConfigMap', d: 'Inyecta variables no sensibles (ej. APP_COLOR=blue) en caliente.' },
+          { t: '2. Secret', d: 'Protege contraseñas y tokens fuera del código fuente.' },
+          { t: '3. PV & PVC', d: 'Disco persistente: aunque borres el Pod, tus datos siguen intactos.' }
+        ]
+      },
+      {
+        badge: 'Semana 05 · Salud, Límites y Seguridad',
+        title: 'Liveness/Readiness Probes, Requests/Limits y RBAC',
+        desc: 'Evita enviar tráfico a Pods enfermos, protege la CPU/RAM de los nodos y aplica mínimo privilegio con Roles.',
+        analogy: 'El Termómetro (Readiness) retira al barista si tiene fiebre antes de atender clientes; los topes de agua/luz (Limits) evitan colapsar la tienda; cada empleado usa Carnet (RBAC).',
+        steps: [
+          { t: '1. Readiness Probe', d: 'Si falla, saca el Pod del EndpointSlice sin matarlo.' },
+          { t: '2. Requests / Limits', d: 'Garantiza recursos mínimos y evita que un Pod consuma todo el nodo.' },
+          { t: '3. RBAC', d: 'Controla quién puede hacer get, list o delete en cada namespace.' }
+        ]
+      },
+      {
+        badge: 'Semana 06 · Proyecto Final',
+        title: 'Empaquetado con Helm Charts (Franquicia KubeCafé)',
+        desc: 'Empaqueta Deployment + Service + Gateway + ConfigMap + PVC en un solo Helm Chart reutilizable con values.yaml.',
+        analogy: 'El Kit de Franquicia completo: con un solo comando `helm install` abres una sucursal entera de KubeCafé lista para operar.',
+        steps: [
+          { t: '1. Chart.yaml & templates/', d: 'Plantillas dinámicas de todos los manifiestos de las semanas 01-05.' },
+          { t: '2. values.yaml', d: 'Personaliza réplicas, dominio, color o recursos por ambiente.' },
+          { t: '3. helm install / upgrade', d: 'Despliega, actualiza o revierte toda la arquitectura en 1 comando.' }
+        ]
+      }
+    ];
+
+    function log(msg, type = 'info') {
+      const box = document.getElementById('consoleLogs');
+      const colors = {
+        info: 'text-slate-300',
+        ok: 'text-emerald-400',
+        warn: 'text-amber-300',
+        err: 'text-rose-400',
+        cmd: 'text-cyan-300'
+      };
+      const time = new Date().toLocaleTimeString('es-CO', { hour12: false });
+      const line = document.createElement('div');
+      line.className = colors[type] || 'text-slate-300';
+      line.innerHTML = `<span class="text-slate-500">[${time}]</span> ${msg}`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('consoleLogs').innerHTML = '';
+      log('Consola reiniciada. Listo para simular eventos.', 'info');
+    }
+
+    function toggleAnalogyMode() {
+      state.showAnalogy = !state.showAnalogy;
+      const box = document.getElementById('analogyBox');
+      const btn = document.getElementById('toggleAnalogyBtn');
+      box.style.display = state.showAnalogy ? 'block' : 'none';
+      btn.textContent = state.showAnalogy ? '☕ Modo Dual: Técnico + KubeCafé' : '⚙️ Modo Solo Técnico';
+    }
+
+    function copyYaml() {
+      const text = document.getElementById('yamlPreview').textContent;
+      navigator.clipboard.writeText(text).then(() => log('📋 Manifiesto YAML copiado al portapapeles.', 'ok'));
+    }
+
+    function selectWeek(idx) {
+      clearTimers();
+      document.getElementById('processStepper').classList.add('hidden');
+      document.getElementById('activeCmdBar').classList.add('hidden');
+      state.netStage = -1;
+      state.week = idx;
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === idx);
+      });
+      const w = WEEKS[idx];
+      document.getElementById('weekBadge').textContent = w.badge;
+      document.getElementById('weekTitle').textContent = w.title;
+      document.getElementById('weekDesc').textContent = w.desc;
+      document.getElementById('weekAnalogy').textContent = w.analogy;
+
+      document.getElementById('flowSummary').innerHTML = w.steps.map(s => `
+        <div class="rounded-xl bg-slate-900/70 border border-slate-800 p-3">
+          <div class="text-xs font-bold text-cyan-300">${s.t}</div>
+          <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">${s.d}</p>
+        </div>
+      `).join('');
+
+      renderWeek();
+      log(`Estación cambiada a <b>${w.badge}</b>`, 'cmd');
+    }
+
+    function renderWeek() {
+      const controls = document.getElementById('controlsBar');
+      const stage = document.getElementById('visualStage');
+      const yaml = document.getElementById('yamlPreview');
+
+      if (state.week === 0) {
+        controls.innerHTML = `
+          <button onclick="setDockerStep(0)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.dockerStep === 0 ? 'bg-amber-600/35 border-amber-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'} border">1. Escribir Dockerfile</button>
+          <button onclick="setDockerStep(1)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.dockerStep === 1 ? 'bg-blue-600/45 border-blue-400 text-white' : 'bg-blue-600/20 border-blue-500/40 text-blue-200'} border">2. docker build (Multi-Stage)</button>
+          <button onclick="setDockerStep(2)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.dockerStep === 2 ? 'bg-emerald-600/45 border-emerald-400 text-white' : 'bg-emerald-600/20 border-emerald-500/40 text-emerald-200'} border">3. docker run (:8000)</button>
+          <button onclick="toggleDockerSecurity()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.dockerRootless ? 'bg-cyan-600/25 border-cyan-500/50 text-cyan-200' : 'bg-rose-600/30 border-rose-500 text-rose-200'} border">
+            ${state.dockerRootless ? '🛡️ Modo Seguro (Rootless ~130MB)' : '⚠️ Modo Inseguro (Root ~1.1GB)'}
+          </button>
+        `;
+        stage.innerHTML = `
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+              <div class="flex-1 w-full p-4 rounded-xl border ${state.dockerStep >= 0 ? 'node-active bg-slate-900/90' : 'border-slate-800 bg-slate-900/40'} text-center">
+                <svg class="w-11 h-11 mx-auto mb-1.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+                <div class="font-bold text-sm text-white">1. Dockerfile</div>
+                <div class="text-xs text-slate-300 mt-1">${state.dockerRootless ? 'Etapa 1: Builder → Etapa 2: Slim' : '1 sola etapa pesada (con compiladores)'}</div>
+                <div class="mt-2 text-[11px] text-amber-300">☕ Receta del tostador</div>
+              </div>
+              <svg class="w-10 h-6 shrink-0 hidden md:block" viewBox="0 0 40 20"><path d="M2 10 H34 M28 4 L36 10 L28 16" fill="none" stroke="${state.dockerStep >= 1 ? '#00F0FF' : '#334155'}" stroke-width="2.5" class="${state.dockerStep >= 1 ? 'flow-line' : ''}"/></svg>
+              <div class="flex-1 w-full p-4 rounded-xl border ${state.dockerStep >= 1 ? 'node-active bg-slate-900/90' : 'border-slate-800 bg-slate-900/40 opacity-50'} text-center">
+                <svg class="w-11 h-11 mx-auto mb-1.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                <div class="font-bold text-sm text-white">2. Imagen OCI (${state.dockerRootless ? '~130 MB' : '~1.1 GB'})</div>
+                <div class="text-xs text-slate-300 mt-1">Capas RO inmutables · <code class="${state.dockerRootless ? 'text-emerald-300' : 'text-rose-300'}">${state.dockerRootless ? 'USER appuser' : 'USER root ⚠️'}</code></div>
+                <div class="mt-2 text-[11px] text-amber-300">☕ Bolsa sellada inmutable</div>
+              </div>
+              <svg class="w-10 h-6 shrink-0 hidden md:block" viewBox="0 0 40 20"><path d="M2 10 H34 M28 4 L36 10 L28 16" fill="none" stroke="${state.dockerStep >= 2 ? '#10B981' : '#334155'}" stroke-width="2.5" class="${state.dockerStep >= 2 ? 'flow-line' : ''}"/></svg>
+              <div class="flex-1 w-full p-4 rounded-xl border ${state.dockerStep >= 2 ? 'node-active bg-emerald-950/30' : 'border-slate-800 bg-slate-900/40 opacity-50'} text-center">
+                <svg class="w-11 h-11 mx-auto mb-1.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                <div class="font-bold text-sm text-emerald-300">3. Contenedor Activo</div>
+                <div class="text-xs text-slate-300 mt-1">Capa RW efímera · Host :8000 → :8000</div>
+                <div class="mt-2 text-[11px] text-amber-300">☕ Taza servida al cliente</div>
+              </div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 flex flex-wrap justify-between gap-2">
+              <span>🔍 <b>Concepto clave:</b> La <b>Imagen</b> es una plantilla de solo lectura (RO); el <b>Contenedor</b> añade una capa superior escribible (RW) y aísla el proceso con Linux Namespaces + cgroups.</span>
+            </div>
+          </div>
+        `;
+        yaml.textContent = state.dockerRootless
+          ? `# Multi-Stage + Non-Root + Healthcheck\nFROM python:3.11-slim AS builder\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt\n\nFROM python:3.11-slim\nWORKDIR /app\nRUN adduser --system --group appuser\nCOPY --from=builder /wheels /wheels\nRUN pip install --no-cache /wheels/*\nCOPY app.py .\nUSER appuser\nEXPOSE 8000\nHEALTHCHECK --interval=30s CMD urllib.request.urlopen('http://localhost:8000/health')\nCMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]`
+          : `# ❌ Antipatrones: 1 etapa pesada, corre como root, sin HEALTHCHECK\nFROM python:3.11\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nEXPOSE 8000\nCMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]`;
+      }
+
+      else if (state.week === 1) {
+        controls.innerHTML = `
+          <button onclick="setPodState('Running')" class="px-3 py-1.5 rounded-lg text-xs font-semibold ${state.podState === 'Running' ? 'bg-emerald-600/40 border-emerald-400 text-white' : 'bg-emerald-600/20 border-emerald-500/40 text-emerald-200'} border">🚀 1. Desplegar Pod (Flujo Completo)</button>
+          <button onclick="setPodState('Pending')" class="px-3 py-1.5 rounded-lg text-xs font-semibold ${state.podState === 'Pending' ? 'bg-amber-600/40 border-amber-400 text-white' : 'bg-amber-600/20 border-amber-500/40 text-amber-200'} border">⚠️ 2. Simular Pending (Sin RAM)</button>
+          <button onclick="setPodState('Sidecar')" class="px-3 py-1.5 rounded-lg text-xs font-semibold ${state.podState === 'Sidecar' ? 'bg-cyan-600/40 border-cyan-400 text-white' : 'bg-cyan-600/20 border-cyan-500/40 text-cyan-200'} border">📋 3. Pod Multicontenedor (Sidecar)</button>
+        `;
+        const inWorker = state.podState !== 'Pending' && (state.podStage === -1 || state.podStage >= 4);
+        stage.innerHTML = `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl border border-blue-500/40 bg-blue-950/20 flex flex-col justify-between">
+              <div>
+                <div class="text-xs font-bold text-blue-300 uppercase mb-2">🏢 Control Plane (Gerencia)</div>
+                <div class="space-y-2 text-xs">
+                  <div class="p-2 rounded border transition-all ${state.podStage === 0 ? 'node-active bg-blue-950/70' : 'bg-slate-900 border-slate-700'}">
+                    <b>1. kube-apiserver</b>: Única puerta REST; autentica, valida el YAML y coordina todo
+                  </div>
+                  <div class="p-2 rounded border transition-all ${state.podStage === 1 ? 'node-active bg-blue-950/70' : 'bg-slate-900 border-slate-700'}">
+                    <b>2. etcd</b>: Base de datos clave-valor donde se persiste el estado del clúster
+                  </div>
+                  <div class="p-2 rounded border transition-all ${state.podStage === 3 ? 'node-active bg-amber-950/60 border-amber-400' : 'bg-slate-900 border-slate-700'}">
+                    <b>3. kube-scheduler</b>: Filtra y puntúa nodos para asignar <code class="text-cyan-300">spec.nodeName</code>
+                  </div>
+                  <div class="p-2 rounded border transition-all ${state.podStage === 2 ? 'node-active bg-purple-950/60' : 'bg-slate-900/70 border-slate-800 text-slate-300'}">
+                    <b>4. kube-controller-manager</b>: Ejecuta bucles de control (Node, ReplicaSet, Deployment, Job)
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2 text-[10px] text-slate-400">💡 Nota conceptual: Todos los componentes hablan <b>solo con kube-apiserver</b>; sólo el API Server escribe directamente en <b>etcd</b>.</div>
+            </div>
+            <div class="p-4 rounded-xl border ${inWorker ? 'node-active' : 'border-amber-500/40'} bg-slate-900/70 transition-all flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold text-emerald-300 uppercase">🪵 Worker Node (worker-01)</span>
+                  <span class="text-[10px] font-mono text-slate-400">kubelet + containerd + Cilium CNI</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 mb-3 text-[10px] text-center">
+                  <div class="p-1.5 rounded bg-slate-950 border ${state.podStage === 4 ? 'border-cyan-400 text-cyan-200' : 'border-slate-800 text-slate-400'}">👷 <b>kubelet</b><br/>Agente del nodo</div>
+                  <div class="p-1.5 rounded bg-slate-950 border ${state.podStage === 4 ? 'border-cyan-400 text-cyan-200' : 'border-slate-800 text-slate-400'}">📦 <b>containerd</b><br/>Runtime CRI</div>
+                  <div class="p-1.5 rounded bg-slate-950 border ${state.podStage === 4 ? 'border-cyan-400 text-cyan-200' : 'border-slate-800 text-slate-400'}">🕸️ <b>Cilium CNI</b><br/>Red / eBPF</div>
+                </div>
+              </div>
+              ${inWorker ? `
+              <div class="p-3 rounded-xl border border-dashed border-cyan-500/50 bg-slate-950/80">
+                <div class="flex justify-between items-center mb-1.5">
+                  <span class="text-xs font-bold text-white">🍽️ Pod: kubecafe-barista</span>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">${state.podState === 'Sidecar' ? 'Running (2/2)' : 'Running (1/1)'}</span>
+                </div>
+                <div class="text-[10px] font-mono text-cyan-300 mb-2">🌐 IP compartida (localhost): 10.244.1.18 · Vol: /var/log</div>
+                <div class="flex gap-2">
+                  <div class="flex-1 p-2 rounded bg-slate-900 border border-emerald-500/40 text-xs text-center">☕ cafe-app (:80)<br/><span class="text-[10px] text-slate-400">Escribe logs</span></div>
+                  ${state.podState === 'Sidecar' ? '<div class="flex-1 p-2 rounded bg-cyan-950/50 border border-cyan-500/50 text-xs text-center text-cyan-200">📋 log-sidecar<br/><span class="text-[10px] text-cyan-300">Lee /var/log</span></div>' : ''}
+                </div>
+              </div>` : `
+              <div class="p-4 rounded-xl border border-dashed border-amber-500/50 bg-amber-950/15 text-center my-auto">
+                <div class="text-2xl mb-1">⏳</div>
+                <div class="text-xs font-bold text-amber-300">Pod en estado: Pending (spec.nodeName = vacío)</div>
+                <div class="text-[11px] text-slate-300 mt-1">${state.podState === 'Pending' ? 'FailedScheduling: 0/1 nodes available: Insufficient memory (64Gi).' : 'Esperando que kube-scheduler asigne nodo y kubelet inicie contenedores...'}</div>
+              </div>`}
+            </div>
+          </div>
+        `;
+        yaml.textContent = state.podState === 'Pending'
+          ? `apiVersion: v1\nkind: Pod\nmetadata:\n  name: kubecafe-barista\nspec:\n  containers:\n    - name: cafe-app\n      image: nginx:alpine\n      resources:\n        requests:\n          memory: "64Gi" # ⚠️ Excede la RAM del Worker Node`
+          : `apiVersion: v1\nkind: Pod\nmetadata:\n  name: kubecafe-barista\n  labels:\n    app: barista\nspec:\n  containers:\n    - name: cafe-app\n      image: nginx:alpine\n      ports:\n        - containerPort: 80${state.podState === 'Sidecar' ? '\n      volumeMounts:\n        - name: logs\n          mountPath: /var/log/nginx\n    - name: log-sidecar\n      image: busybox:1.36\n      command: ["sh", "-c", "tail -f /var/log/nginx/access.log"]\n      volumeMounts:\n        - name: logs\n          mountPath: /var/log/nginx\n  volumes:\n    - name: logs\n      emptyDir: {}' : ''}`;
+      }
+
+      else if (state.week === 2) {
+        controls.innerHTML = `
+          <button onclick="scalePods(1)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 hover:border-cyan-400">➕ Escalar (+1)</button>
+          <button onclick="scalePods(-1)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 hover:border-cyan-400">➖ Reducir (-1)</button>
+          <button onclick="killOnePod(0)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/25 border border-rose-500/50 text-rose-200">💥 Matar 1 Pod</button>
+          <button onclick="rollingUpdate()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/25 border border-emerald-500/50 text-emerald-200">🔄 Rolling Update (v1 ↔ v2)</button>
+          <button onclick="simulateBadDeployAndRollback()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-600/25 border border-amber-500/50 text-amber-200">🚨 Imagen Rota + Rollback</button>
+        `;
+        const healthyPods = state.pods.filter(p => p.healthy);
+        const v1Count = state.pods.filter(p => p.ver === 'v1.0').length;
+        const v2Count = state.pods.filter(p => p.ver === 'v2.0').length;
+        const badCount = state.pods.filter(p => p.ver.includes('roto')).length;
+        const rsList = [
+          { name: 'kubecafe-baristas-6d4cf5 (v1.0)', ver: 'v1.0', count: v1Count, active: v1Count > 0 },
+          ...(v2Count > 0 || state.revision > 1 ? [{ name: 'kubecafe-baristas-7f89b4 (v2.0)', ver: 'v2.0', count: v2Count, active: v2Count > 0 }] : []),
+          ...(badCount > 0 ? [{ name: 'kubecafe-baristas-9bad99 (v99-roto)', ver: 'v99-roto', count: badCount, active: true, bad: true }] : [])
+        ];
+        stage.innerHTML = `
+          <div class="flex flex-col gap-3">
+            <!-- Nivel 1: Deployment -->
+            <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-blue-950/35 border border-blue-500/50">
+              <div>
+                <div class="text-xs font-bold text-blue-300">🧐 Nivel 1 · Deployment: kubecafe-baristas (Revisión #${state.revision})</div>
+                <div class="text-[11px] text-slate-300">Deseado: <b>${state.replicas} réplicas</b> · Estrategia: <code class="text-cyan-300">RollingUpdate (maxSurge: 1, maxUnavailable: 0)</code></div>
+              </div>
+              <span class="text-xs px-2.5 py-1 rounded-full ${healthyPods.length >= state.replicas ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'} border font-bold">${healthyPods.length}/${state.replicas} READY</span>
+            </div>
+
+            <!-- Nivel 2: ReplicaSets (con historial de revisiones) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              ${rsList.map(rs => `
+                <div class="p-2.5 rounded-xl border ${rs.bad ? 'border-rose-500/60 bg-rose-950/25' : rs.active ? 'border-emerald-500/50 bg-slate-900/90' : 'border-slate-800 bg-slate-950/60 opacity-65'} flex items-center justify-between">
+                  <div class="text-xs">
+                    <span class="font-bold ${rs.bad ? 'text-rose-300' : rs.active ? 'text-emerald-300' : 'text-slate-400'}">📋 Nivel 2 · ReplicaSet: ${rs.name}</span>
+                    <span class="block text-[10px] text-slate-400">${rs.count === 0 ? 'Guardado en historial (0 Pods) para Rollback instantáneo' : `Mantiene ${rs.count} Pod(s) con selector app=barista`}</span>
+                  </div>
+                  <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-950 border border-slate-700 text-white">${rs.count} Pods</span>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Nivel 3: Pods (clic para matar) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+              ${state.pods.map((p, idx) => `
+                <div class="p-3 rounded-xl border ${!p.healthy ? 'border-rose-500 bg-rose-950/35' : p.ver === 'v2.0' ? 'border-cyan-400 bg-cyan-950/30' : 'border-emerald-500/50 bg-slate-900/90'} text-center transition-all">
+                  <div class="text-xl">${p.healthy ? '☕' : '💥'}</div>
+                  <div class="text-xs font-mono font-bold text-white mt-1">${p.id}</div>
+                  <div class="text-[11px] ${p.healthy ? 'text-slate-300' : 'text-rose-300 font-semibold'}">${p.ver} · ${p.healthy ? 'Running (Ready)' : 'ImagePullBackOff'}</div>
+                  ${p.healthy ? `<button onclick="killOnePod(${idx})" class="mt-2 w-full py-1 rounded bg-rose-500/15 hover:bg-rose-500/35 border border-rose-500/40 text-[10px] font-semibold text-rose-200 transition">🗑️ Matar este Pod</button>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        yaml.textContent = `apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: kubecafe-baristas\nspec:\n  replicas: ${state.replicas}\n  revisionHistoryLimit: 10\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:\n      maxSurge: 1\n      maxUnavailable: 0\n  selector:\n    matchLabels:\n      app: barista\n  template:\n    metadata:\n      labels:\n        app: barista # Debe coincidir con matchLabels\n    spec:\n      containers:\n        - name: app\n          image: kubecafe/api:${state.version}`;
+      }
+
+      else if (state.week === 3) {
+        controls.innerHTML = `
+          <button onclick="sendTraffic('/cocina')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.netRoute === '/cocina' ? 'bg-cyan-600/40 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'} border">🌐 1. GET /cocina</button>
+          <button onclick="sendTraffic('/menu')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.netRoute === '/menu' ? 'bg-cyan-600/40 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'} border">🌐 2. GET /menu</button>
+          <button onclick="sendNodePortTraffic()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.netRoute === 'nodeport' ? 'bg-amber-600/40 border-amber-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'} border">🔌 3. NodePort (:30080)</button>
+          <button onclick="sendLoadBalancerTraffic()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.netRoute === 'lb' ? 'bg-emerald-600/40 border-emerald-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'} border">⚖️ 4. LoadBalancer (Cilium L2)</button>
+          <button onclick="sendAiGatewayTraffic()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.netRoute === '/ia/auto' ? 'bg-purple-600/40 border-purple-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'} border">🤖 5. AI Gateway (70/30)</button>
+          <button onclick="toggleBrokenSelector()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${state.netLabelBroken ? 'bg-rose-600/40 border-rose-400 text-white' : 'bg-rose-600/20 border-rose-500/40 text-rose-200'} border">🏷️ 6. ${state.netLabelBroken ? 'Reparar Selector' : 'Romper Selector'}</button>
+        `;
+        const isCocina = state.netRoute === '/cocina';
+        const isNodePort = state.netRoute === 'nodeport';
+        const isLb = state.netRoute === 'lb';
+        const isAi = state.netRoute === '/ia/auto';
+        const skipGw = isNodePort || isLb;
+        const svcName = isCocina ? 'cocina-svc (ClusterIP)' : isNodePort ? 'menu-nodeport-svc (:30080)' : isLb ? 'kubecafe-lb-svc (172.16.0.200)' : isAi ? 'ollama-llama/gemma (70/30)' : 'menu-svc (ClusterIP)';
+        const hop = state.netStage;
+        const epsCount = state.netLabelBroken ? 0 : 2;
+        stage.innerHTML = `
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-2">
+              <div class="flex-1 w-full p-3 rounded-xl border ${hop === 0 ? 'node-active' : skipGw ? 'border-slate-800 opacity-45' : 'border-blue-500/50'} bg-blue-950/30 text-center transition-all">
+                <svg class="w-9 h-9 mx-auto mb-1 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+                <div class="text-xs font-bold text-white">1. Gateway (Cilium)</div>
+                <div class="text-[11px] text-cyan-300">${isLb ? 'Omitido (Cilium L2 ARP)' : isNodePort ? 'Omitido (Acceso a Nodo)' : 'gatewayClassName: cilium (:80)'}</div>
+              </div>
+              <svg class="w-7 h-6 shrink-0 hidden md:block" viewBox="0 0 32 20"><path d="M2 10 H26 M20 4 L28 10 L20 16" fill="none" stroke="${hop >= 1 && !skipGw ? '#00F0FF' : '#334155'}" stroke-width="2.5" class="${hop >= 1 && !skipGw ? 'flow-line' : ''}"/></svg>
+              <div class="flex-1 w-full p-3 rounded-xl border ${hop === 1 ? 'node-active' : skipGw ? 'border-slate-800 opacity-45' : 'border-purple-500/50'} bg-purple-950/30 text-center transition-all">
+                <svg class="w-9 h-9 mx-auto mb-1 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                <div class="text-xs font-bold text-white">2. ${isAi ? 'HTTPRoute (AI 70/30)' : 'HTTPRoute'}</div>
+                <div class="text-[11px] text-purple-300">${isLb ? 'EXTERNAL-IP: 172.16.0.200' : isNodePort ? 'Sin HTTPRoute (L4)' : `PathPrefix: ${state.netRoute}`}</div>
+              </div>
+              <svg class="w-7 h-6 shrink-0 hidden md:block" viewBox="0 0 32 20"><path d="M2 10 H26 M20 4 L28 10 L20 16" fill="none" stroke="${hop >= 2 ? '#A855F7' : '#334155'}" stroke-width="2.5" class="${hop >= 2 ? 'flow-line' : ''}"/></svg>
+              <div class="flex-1 w-full p-3 rounded-xl border ${hop === 2 ? 'node-active' : state.netLabelBroken ? 'border-rose-500 bg-rose-950/30' : 'border-cyan-500/50 bg-slate-900'} text-center transition-all">
+                <svg class="w-9 h-9 mx-auto mb-1 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="6" rx="2"/><rect x="2" y="15" width="20" height="6" rx="2"/></svg>
+                <div class="text-xs font-bold text-white">3. ${svcName}</div>
+                <div class="text-[11px] ${state.netLabelBroken ? 'text-rose-300 font-bold' : 'text-emerald-300'}">${isLb ? 'allocateLoadBalancerNodePorts: false' : `EndpointSlices: ${epsCount} IPs`}</div>
+              </div>
+              <svg class="w-7 h-6 shrink-0 hidden md:block" viewBox="0 0 32 20"><path d="M2 10 H26 M20 4 L28 10 L20 16" fill="none" stroke="${hop >= 3 && !state.netLabelBroken ? '#10B981' : '#334155'}" stroke-width="2.5" class="${hop >= 3 && !state.netLabelBroken ? 'flow-line' : ''}"/></svg>
+              <div class="flex-1 w-full space-y-2">
+                <div class="p-2 rounded-lg border ${state.netLabelBroken ? 'border-rose-500/50 bg-rose-950/20 text-rose-300' : hop >= 3 ? 'node-active bg-emerald-950/50 text-white' : 'border-emerald-500/40 bg-emerald-950/20 text-slate-200'} text-xs text-center transition-all">
+                  ${isAi ? '🤖 llama3.2:1b (:11434 · 70%)' : '☕ Pod-1 (10.244.0.12:80)'}<br/><span class="text-[10px] font-mono">label: app=${ isCocina ? 'cocina' : isLb ? 'kubecafe-lb' : isAi ? 'ollama-rapido' : 'menu' }</span>
+                </div>
+                <div class="p-2 rounded-lg border ${state.netLabelBroken ? 'border-rose-500/50 bg-rose-950/20 text-rose-300' : hop >= 3 ? 'border-emerald-400 bg-emerald-950/40 text-white' : 'border-emerald-500/40 bg-emerald-950/20 text-slate-200'} text-xs text-center transition-all">
+                  ${isAi ? '🧠 gemma2:2b (:11434 · 30%)' : '☕ Pod-2 (10.244.0.15:80)'}<br/><span class="text-[10px] font-mono">label: app=${ isCocina ? 'cocina' : isLb ? 'kubecafe-lb' : isAi ? 'ollama-avanzado' : 'menu' }</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300 flex flex-wrap justify-between gap-2">
+              <span>📡 <b>CoreDNS interno:</b> <code class="text-cyan-300">${isCocina ? 'cocina-svc' : isLb ? 'kubecafe-lb-svc' : isAi ? 'ollama-llama-svc' : 'menu-svc'}.default.svc.cluster.local</code></span>
+              <span>Selector del Service: <code class="${state.netLabelBroken ? 'text-rose-400 font-bold' : 'text-emerald-300'}">app: ${state.netLabelBroken ? 'typo-erroneo ❌' : (isCocina ? 'cocina' : isLb ? 'kubecafe-lb' : isAi ? 'ollama-*' : 'menu')}</code></span>
+            </div>
+          </div>
+        `;
+        yaml.textContent = isLb
+          ? `apiVersion: cilium.io/v2\nkind: CiliumLoadBalancerIPPool\nmetadata:\n  name: iximiuz-pool\nspec:\n  blocks:\n    - start: "172.16.0.200"\n      stop: "172.16.0.240"\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: kubecafe-lb-svc\nspec:\n  type: LoadBalancer\n  allocateLoadBalancerNodePorts: false\n  selector:\n    app: kubecafe-lb\n  ports:\n    - port: 80\n      targetPort: 80`
+          : isAi
+          ? `apiVersion: gateway.networking.k8s.io/v1\nkind: HTTPRoute\nmetadata:\n  name: kubecafe-ia-route\nspec:\n  parentRefs:\n    - name: kubecafe-gateway\n  rules:\n    - matches:\n        - path: { type: PathPrefix, value: /ia/auto }\n      backendRefs:\n        - name: ollama-llama-svc\n          port: 11434\n          weight: 70\n        - name: ollama-gemma-svc\n          port: 11434\n          weight: 30`
+          : isNodePort
+          ? `apiVersion: v1\nkind: Service\nmetadata:\n  name: menu-nodeport-svc\nspec:\n  type: NodePort\n  selector:\n    app: ${state.netLabelBroken ? 'typo-erroneo' : 'menu'}\n  ports:\n    - port: 80\n      targetPort: 80\n      nodePort: 30080 # Rango K8s: 30000-32767`
+          : `apiVersion: gateway.networking.k8s.io/v1\nkind: Gateway\nmetadata:\n  name: kubecafe-gateway\nspec:\n  gatewayClassName: cilium\n  listeners:\n    - name: http\n      protocol: HTTP\n      port: 80\n---\napiVersion: gateway.networking.k8s.io/v1\nkind: HTTPRoute\nmetadata:\n  name: kubecafe-rutas\nspec:\n  parentRefs:\n    - name: kubecafe-gateway\n  rules:\n    - matches:\n        - path: { type: PathPrefix, value: ${state.netRoute} }\n      backendRefs:\n        - name: ${isCocina ? 'cocina-svc' : 'menu-svc'}\n          port: 80`;
+      }
+
+      else if (state.week === 4) {
+        controls.innerHTML = `
+          <button onclick="cycleColor()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-600/25 border border-amber-500/50 text-amber-200">🧂 1. Cambiar ConfigMap (${state.appColor})</button>
+          <button onclick="toggleSecret()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/25 border border-rose-500/50 text-rose-200">🔐 2. ${state.secretRevealed ? 'Ocultar' : 'Decodificar'} Secret</button>
+          <button onclick="addOrder()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/25 border border-emerald-500/50 text-emerald-200">💾 3. Guardar Pedido (+1)</button>
+          <button onclick="restartPodWithPvc()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600/25 border border-cyan-500/50 text-cyan-200">🔄 4. Borrar Pod y Verificar PVC</button>
+        `;
+        const colorMap = { blue: 'border-blue-500 bg-blue-950/40', green: 'border-emerald-500 bg-emerald-950/40', purple: 'border-purple-500 bg-purple-950/40' };
+        stage.innerHTML = `
+          <div class="flex flex-col gap-3">
+            <!-- Pod consumidor en la parte superior -->
+            <div class="p-3 rounded-xl border ${state.pvcPodRestarting ? 'border-amber-400 bg-amber-950/25' : colorMap[state.appColor]} flex flex-wrap items-center justify-between gap-2 transition-all">
+              <div>
+                <div class="text-xs font-bold text-white">🍽️ Pod: kubecafe-db-app ${state.pvcPodRestarting ? '(Reiniciando contenedor...)' : '(Running)'}</div>
+                <div class="text-[11px] text-slate-300">Recibe variables por <code class="text-cyan-300">envFrom</code> y monta el volumen persistente en <code class="text-emerald-300">/var/lib/mysql</code></div>
+              </div>
+              <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-950 border border-slate-700 text-cyan-300">Tema UI: ${state.appColor.toUpperCase()}</span>
+            </div>
+
+            <!-- Las 3 fuentes de datos y persistencia -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="p-3.5 rounded-xl border ${state.s04Active === 'cm' ? 'node-active' : 'border-amber-500/40'} bg-slate-900/80 text-center">
+                <div class="text-xl mb-1">🧂</div>
+                <div class="text-xs font-bold text-white">ConfigMap: app-config</div>
+                <div class="text-xs font-mono text-cyan-300 mt-1">APP_COLOR="${state.appColor}"</div>
+                <div class="text-[10px] text-slate-400 mt-1">Datos NO sensibles (clave-valor). Si se inyecta como env var, requiere reiniciar el Pod para reflejar cambios.</div>
+              </div>
+              <div class="p-3.5 rounded-xl border ${state.s04Active === 'secret' ? 'node-active' : 'border-rose-500/40'} bg-rose-950/15 text-center">
+                <div class="text-xl mb-1">🔐</div>
+                <div class="text-xs font-bold text-white">Secret: db-credentials</div>
+                <div class="text-xs font-mono text-rose-300 mt-1">${state.secretRevealed ? 'dbpassword123 (Texto plano)' : 'ZGJwYXNzd29yZDEyMw== (Base64)'}</div>
+                <div class="text-[10px] text-slate-400 mt-1">⚠️ Base64 NO es cifrado; protege el acceso con RBAC y cifrado de etcd en reposo.</div>
+              </div>
+              <div class="p-3.5 rounded-xl border ${state.s04Active === 'pvc' ? 'node-active' : 'border-emerald-500/50'} bg-emerald-950/20 text-center transition-all">
+                <div class="text-xl mb-1">${state.pvcPodRestarting ? '⏳' : '🏬'}</div>
+                <div class="text-xs font-bold text-white">PVC (Bound) ➔ PV (5Gi)</div>
+                <div class="text-base font-extrabold text-emerald-300 mt-1">${state.pvcOrders} pedidos en disco</div>
+                <div class="text-[10px] text-slate-400 mt-1">StorageClass: <code class="text-emerald-300">standard (RWO)</code> · Independiente del ciclo de vida del Pod.</div>
+              </div>
+            </div>
+          </div>
+        `;
+        yaml.textContent = `apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  APP_COLOR: "${state.appColor}"\n---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: db-credentials\ntype: Opaque\nstringData:\n  MYSQL_PASSWORD: "${state.secretRevealed ? 'dbpassword123' : '********'}"\n---\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: kubecafe-bodega-pvc\nspec:\n  storageClassName: standard\n  accessModes: ["ReadWriteOnce"]\n  resources:\n    requests:\n      storage: 5Gi`;
+      }
+
+      else if (state.week === 5) {
+        const t = state.s05Tab;
+        const tabHeader = `
+          <div class="flex flex-wrap gap-1.5 mr-2 pr-2 border-r border-slate-700">
+            <button onclick="setS05Tab('probes')" class="px-2.5 py-1 rounded-lg text-xs font-bold border ${t === 'probes' ? 'bg-cyan-600/35 border-cyan-400 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}">🌡️ 1. Probes</button>
+            <button onclick="setS05Tab('resources')" class="px-2.5 py-1 rounded-lg text-xs font-bold border ${t === 'resources' ? 'bg-amber-600/35 border-amber-400 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}">⚖️ 2. Resources</button>
+            <button onclick="setS05Tab('rbac')" class="px-2.5 py-1 rounded-lg text-xs font-bold border ${t === 'rbac' ? 'bg-purple-600/35 border-purple-400 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}">🪪 3. RBAC</button>
+          </div>
+        `;
+
+        if (t === 'probes') {
+          controls.innerHTML = tabHeader + `
+            <button onclick="simStartup()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600/25 border border-blue-500/50 text-blue-200">🚀 1. Simular Startup</button>
+            <button onclick="simLivenessFail()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-600/25 border border-rose-500/50 text-rose-200">💥 2. Fallo Liveness</button>
+            <button onclick="toggleProbe()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-600/25 border border-amber-500/50 text-amber-200">✂️ 3. ${state.probeHealthy ? 'Fallo Readiness' : 'Restaurar Readiness'}</button>
+          `;
+          stage.innerHTML = `
+            <div class="flex flex-col gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="p-3.5 rounded-xl border ${state.startupDone ? 'border-blue-500/50 bg-blue-950/20' : 'node-active bg-blue-950/40'} text-center">
+                  <div class="text-xl mb-1">🚀</div>
+                  <div class="text-xs font-bold text-white">1. StartupProbe (/healthz)</div>
+                  <div class="text-[11px] text-slate-300 mt-1">¿Terminó de arrancar la app?</div>
+                  <div class="text-xs font-bold mt-2 ${state.startupDone ? 'text-emerald-300' : 'text-amber-300'}">${state.startupDone ? '✅ Completado (Desbloquea Liveness)' : '⏳ Arrancando... (Liveness en pausa)'}</div>
+                </div>
+                <div class="p-3.5 rounded-xl border ${state.livenessAlive ? 'border-emerald-500/50 bg-emerald-950/20' : 'border-rose-500 bg-rose-950/40'} text-center">
+                  <div class="text-xl mb-1">💓</div>
+                  <div class="text-xs font-bold text-white">2. LivenessProbe (/healthz)</div>
+                  <div class="text-[11px] text-slate-300 mt-1">Si falla → <b>kubelet mata y reinicia</b></div>
+                  <div class="text-xs font-bold mt-2 ${state.livenessAlive ? 'text-emerald-300' : 'text-rose-300'}">${state.livenessAlive ? `✅ 200 OK · Restarts: ${state.livenessRestarts}` : '💥 Deadlock → Reiniciando contenedor!'}</div>
+                </div>
+                <div class="p-3.5 rounded-xl border ${state.probeHealthy ? 'border-emerald-500/50 bg-emerald-950/20' : 'border-amber-500 bg-amber-950/35'} text-center">
+                  <div class="text-xl mb-1">🚦</div>
+                  <div class="text-xs font-bold text-white">3. ReadinessProbe (/ready)</div>
+                  <div class="text-[11px] text-slate-300 mt-1">Si falla → <b>Sale del Service (NO reinicia)</b></div>
+                  <div class="text-xs font-bold mt-2 ${state.probeHealthy ? 'text-emerald-300' : 'text-amber-300'}">${state.probeHealthy ? '✅ Ready=True (Recibe tráfico)' : '✂️ Ready=False (Fuera de EndpointSlice)'}</div>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-xl border ${state.probeHealthy && state.startupDone && state.livenessAlive ? 'border-emerald-500/40 bg-emerald-950/15 text-emerald-200' : 'border-amber-500/50 bg-amber-950/20 text-amber-200'} text-xs text-center">
+                🌐 <b>Estado en Service EndpointSlice:</b> ${state.probeHealthy && state.startupDone && state.livenessAlive ? '✅ Pod incluido en el balanceo de carga (10.244.1.18:8000)' : '🚫 Pod retirado temporalmente del Service para no dar errores 500 a clientes'}
+              </div>
+            </div>
+          `;
+          yaml.textContent = `startupProbe:\n  httpGet: { path: /healthz, port: 8000 }\n  failureThreshold: 30\n  periodSeconds: 5\nlivenessProbe:\n  httpGet: { path: /healthz, port: 8000 }\n  periodSeconds: 10\nreadinessProbe:\n  httpGet: { path: /ready, port: 8000 }\n  periodSeconds: 5`;
+        } else if (t === 'resources') {
+          controls.innerHTML = tabHeader + `
+            <button onclick="simResources('normal')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600/25 border border-emerald-500/50 text-emerald-200">⚡ 1. Uso Normal</button>
+            <button onclick="simResources('cpu_throttle')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-600/25 border border-amber-500/50 text-amber-200">🔥 2. Tope CPU (Throttling)</button>
+            <button onclick="simResources('oom')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-600/25 border border-rose-500/50 text-rose-200">💥 3. Tope RAM (OOMKilled)</button>
+          `;
+          const r = state.resLoad;
+          const cpuPct = r === 'normal' ? 40 : r === 'cpu_throttle' ? 100 : 50;
+          const ramPct = r === 'normal' ? 45 : r === 'cpu_throttle' ? 60 : 100;
+          stage.innerHTML = `
+            <div class="flex flex-col gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl border ${r === 'cpu_throttle' ? 'border-amber-500 bg-amber-950/25' : 'border-slate-700 bg-slate-900/70'}">
+                  <div class="flex justify-between text-xs font-bold mb-2">
+                    <span>⚙️ CPU (Request: 100m | Limit: 250m)</span>
+                    <span class="${r === 'cpu_throttle' ? 'text-amber-300' : 'text-emerald-300'}">${r === 'cpu_throttle' ? '250m → CFS Throttling!' : '100m OK'}</span>
+                  </div>
+                  <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                    <div class="h-full ${r === 'cpu_throttle' ? 'bg-amber-400' : 'bg-emerald-400'} transition-all" style="width:${cpuPct}%"></div>
+                  </div>
+                  <p class="text-[11px] text-slate-300 mt-2">La CPU es un recurso <b>compresible</b>: al llegar al Limit, Linux cgroups restringe ciclos de CPU (más lento, pero <b>no muere</b>).</p>
+                </div>
+                <div class="p-4 rounded-xl border ${r === 'oom' ? 'border-rose-500 bg-rose-950/30' : 'border-slate-700 bg-slate-900/70'}">
+                  <div class="flex justify-between text-xs font-bold mb-2">
+                    <span>🧠 Memoria (Request: 128Mi | Limit: 256Mi)</span>
+                    <span class="${r === 'oom' ? 'text-rose-300' : 'text-emerald-300'}">${r === 'oom' ? 'OOMKilled (Exit 137)' : '128Mi OK'}</span>
+                  </div>
+                  <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                    <div class="h-full ${r === 'oom' ? 'bg-rose-500' : 'bg-cyan-400'} transition-all" style="width:${ramPct}%"></div>
+                  </div>
+                  <p class="text-[11px] text-slate-300 mt-2">La RAM es <b>incompresible</b>: si supera el Limit (256Mi), el Kernel invoca OOM Killer (<code class="text-rose-300">SIGKILL / Exit 137</code>).</p>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 text-center">
+                📊 <b>QoS Class del Pod:</b> <code class="text-cyan-300">Burstable</code> (porque <code class="text-slate-200">requests &lt; limits</code>; si fueran iguales sería <code class="text-emerald-300">Guaranteed</code>).
+              </div>
+            </div>
+          `;
+          yaml.textContent = `resources:\n  requests:          # Usado por kube-scheduler para elegir Nodo\n    cpu: "100m"\n    memory: "128Mi"\n  limits:            # Aplicado por cgroups del Kernel en el Nodo\n    cpu: "250m"      # Compresible -> Throttling\n    memory: "256Mi"  # Incompresible -> OOMKilled (Exit 137)`;
+        } else {
+          controls.innerHTML = tabHeader + `
+            <button onclick="toggleRbac()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-600/25 border border-purple-500/50 text-purple-200">🪪 Cambiar Rol: ${state.rbacRole}</button>
+            <button onclick="testRbac('get')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600/25 border border-emerald-500/50 text-emerald-200">🔍 get pods</button>
+            <button onclick="testRbac('create')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-600/25 border border-cyan-500/50 text-cyan-200">🚀 create pods</button>
+            <button onclick="testRbac('delete')" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-600/25 border border-rose-500/50 text-rose-200">🗑️ delete pods</button>
+          `;
+          const permsMap = {
+            viewer: ['get', 'list', 'watch'],
+            editor: ['get', 'list', 'watch', 'create', 'update', 'patch'],
+            admin: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+          };
+          const roleVerbs = permsMap[state.rbacRole];
+          stage.innerHTML = `
+            <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+              <div class="flex-1 w-full p-4 rounded-xl border border-cyan-500/50 bg-cyan-950/20 text-center">
+                <div class="text-2xl mb-1">🪪</div>
+                <div class="text-xs font-bold text-white">1. Subject (ServiceAccount)</div>
+                <div class="text-xs font-mono text-cyan-300 mt-1">sa: ${state.rbacRole}</div>
+                <div class="text-[10px] text-slate-400 mt-1">Quién hace la petición</div>
+              </div>
+              <svg class="w-8 h-6 shrink-0 hidden md:block" viewBox="0 0 32 20"><path d="M2 10 H26 M20 4 L28 10 L20 16" fill="none" stroke="#A855F7" stroke-width="2.5" class="flow-line"/></svg>
+              <div class="flex-1 w-full p-4 rounded-xl border border-purple-500/50 bg-purple-950/20 text-center">
+                <div class="text-2xl mb-1">📜</div>
+                <div class="text-xs font-bold text-white">2. RoleBinding ➔ Role</div>
+                <div class="text-[11px] text-purple-300 mt-1 font-mono">[${roleVerbs.join(', ')}]</div>
+                <div class="text-[10px] text-slate-400 mt-1">Nivel: Namespace (Role)</div>
+              </div>
+              <svg class="w-8 h-6 shrink-0 hidden md:block" viewBox="0 0 32 20"><path d="M2 10 H26 M20 4 L28 10 L20 16" fill="none" stroke="#10B981" stroke-width="2.5" class="flow-line"/></svg>
+              <div class="flex-1 w-full p-4 rounded-xl border ${state.rbacResult ? (state.rbacResult.ok ? 'border-emerald-500 bg-emerald-950/30' : 'border-rose-500 bg-rose-950/30') : 'border-slate-700 bg-slate-900/70'} text-center">
+                <div class="text-2xl mb-1">${state.rbacResult ? (state.rbacResult.ok ? '✅' : '🚫') : '🛡️'}</div>
+                <div class="text-xs font-bold text-white">3. Decisión RBAC (API Server)</div>
+                <div class="text-[11px] mt-1 font-semibold ${state.rbacResult ? (state.rbacResult.ok ? 'text-emerald-300' : 'text-rose-300') : 'text-slate-400'}">${state.rbacResult ? state.rbacResult.text : 'Prueba get, create o delete'}</div>
+              </div>
+            </div>
+          `;
+          yaml.textContent = `apiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata:\n  name: ${state.rbacRole}-role\n  namespace: default\nrules:\n  - apiGroups: [""]\n    resources: ["pods"]\n    verbs: [${roleVerbs.map(v => `"${v}"`).join(', ')}]\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: RoleBinding\nmetadata:\n  name: ${state.rbacRole}-binding\nsubjects:\n  - kind: ServiceAccount\n    name: ${state.rbacRole}\nroleRef:\n  kind: Role\n  name: ${state.rbacRole}-role\n  apiGroup: rbac.authorization.k8s.io`;
+        }
+      }
+
+      else if (state.week === 6) {
+        const isProd = state.helmEnv === 'prod';
+        controls.innerHTML = `
+          <button onclick="toggleHelmEnv()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-600/25 border border-amber-500/50 text-amber-200">📄 Values: ${isProd ? 'values-prod.yaml (3 rép)' : 'values-dev.yaml (1 rép)'}</button>
+          <button onclick="previewHelmTemplate()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 text-cyan-300">🔍 1. helm template</button>
+          <button onclick="deployHelm()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-cyan-500/20">
+            🚀 2. ${state.helmStage >= 4 ? 'helm upgrade (Nueva Rev)' : 'helm install kubecafe'}
+          </button>
+          ${state.helmRev > 1 ? `<button onclick="rollbackHelm()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/25 border border-rose-500/50 text-rose-200">⏪ 3. helm rollback</button>` : ''}
+        `;
+        const h = state.helmStage;
+        stage.innerHTML = `
+          <div class="p-4 rounded-xl border ${h >= 4 ? 'node-active bg-slate-900/90' : 'border-slate-700 bg-slate-900/50'} text-center">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-800">
+              <span class="text-xs font-bold text-cyan-300">🍱 Release: kubecafe · Revisión Helm #${state.helmRev}</span>
+              <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Ambiente: ${isProd ? 'PRODUCCIÓN (3 réplicas · 10Gi)' : 'DESARROLLO (1 réplica · 2Gi)'}</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3 text-left text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div class="font-bold text-amber-300">1. values-${state.helmEnv}.yaml</div>
+                <div class="font-mono text-[11px] text-slate-300 mt-1">replicaCount: ${isProd ? 3 : 1}<br/>tag: "${isProd ? 'v2.0' : 'v2.0-dev'}"</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+                <div class="font-bold text-cyan-300">2. templates/*.yaml</div>
+                <div class="font-mono text-[11px] text-slate-300 mt-1">replicas: {{ .Values.replicaCount }}</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-emerald-500/40">
+                <div class="font-bold text-emerald-300">3. Manifiesto Renderizado</div>
+                <div class="font-mono text-[11px] text-emerald-200 mt-1">replicas: ${isProd ? 3 : 1} (Enviado a API Server)</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+              <div class="p-2 rounded bg-slate-950 border ${h >= 1 ? 'border-emerald-500/60 text-emerald-300' : 'border-slate-800 text-slate-500'}">🚪 Gateway + HTTPRoute</div>
+              <div class="p-2 rounded bg-slate-950 border ${h >= 2 ? 'border-emerald-500/60 text-emerald-300' : 'border-slate-800 text-slate-500'}">🔄 Deployment (${isProd ? 3 : 1} Pods)</div>
+              <div class="p-2 rounded bg-slate-950 border ${h >= 3 ? 'border-emerald-500/60 text-emerald-300' : 'border-slate-800 text-slate-500'}">🧂 ConfigMap + Secret</div>
+              <div class="p-2 rounded bg-slate-950 border ${h >= 4 ? 'border-emerald-500/60 text-emerald-300' : 'border-slate-800 text-slate-500'}">🏬 PVC (${isProd ? '10Gi' : '2Gi'})</div>
+            </div>
+          </div>
+        `;
+        yaml.textContent = `# values-${state.helmEnv}.yaml (Franquicia KubeCafé)\nreplicaCount: ${isProd ? 3 : 1}\nimage:\n  repository: kubecafe/api\n  tag: "${isProd ? 'v2.0' : 'v2.0-dev'}"\ngateway:\n  enabled: true\n  className: cilium\npersistence:\n  enabled: true\n  size: ${isProd ? '10Gi' : '2Gi'}`;
+      }
+    }
+
+    // Interactive Handlers
+    function toggleDockerSecurity() {
+      state.dockerRootless = !state.dockerRootless;
+      renderWeek();
+      showCmd(state.dockerRootless ? 'docker image ls secure-translator:1.0 # 130MB (appuser)' : 'docker image ls insecure-translator:1.0 # 1.1GB (root)');
+      log(state.dockerRootless ? '🛡️ Activado Multi-Stage + usuario no-root (appuser).' : '⚠️ Modo inseguro: 1 sola etapa pesada (~1.1GB) corriendo como root.', state.dockerRootless ? 'ok' : 'warn');
+    }
+    function setDockerStep(step) {
+      if (step === 0) {
+        state.dockerStep = 0;
+        renderWeek();
+        showCmd('cat Dockerfile');
+        log('Dockerfile listo con separación de etapa Builder y Runtime.', 'info');
+        return;
+      }
+      if (step === 1) {
+        runProcess([
+          { label: '1. Etapa Builder', msg: '⚙️ Compilando wheels de Python en contenedor temporal...', action: () => { state.dockerStep = 0; renderWeek(); } },
+          { label: '2. Copiar Artefactos', msg: '📦 Copiando solo /wheels a python:3.11-slim y creando appuser...', action: () => { state.dockerStep = 1; renderWeek(); } },
+          { label: '3. Imagen OCI Lista', msg: '✅ Imagen inmutable creada (~130 MB) sin compiladores.', action: () => log('docker build completado: imagen ligera de ~130 MB.', 'ok') }
+        ], null, 'docker build -t secure-translator:1.0 .');
+        return;
+      }
+      runProcess([
+        { label: '1. Namespaces + cgroups', msg: '📦 Creando aislamiento del proceso desde secure-translator:1.0...', action: () => { state.dockerStep = 1; renderWeek(); } },
+        { label: '2. Port Mapping', msg: '🔌 Mapeando puerto host 8000 → contenedor 8000 (UID appuser)...', action: () => { state.dockerStep = 2; renderWeek(); } },
+        { label: '3. HEALTHCHECK OK', msg: '✅ Contenedor HEALTHY sirviendo en http://localhost:8000', action: () => log('docker run: Contenedor corriendo como appuser en :8000 (healthy).', 'ok') }
+      ], null, 'docker run -d --name translator -p 8000:8000 secure-translator:1.0');
+    }
+    function setPodState(s) {
+      if (s === 'Pending') {
+        runProcess([
+          { label: '1. API Server', msg: '🏢 kube-apiserver autentica, autoriza y valida el Pod (64Gi RAM)...', action: () => { state.podState = 'Pending'; state.podStage = 0; renderWeek(); } },
+          { label: '2. etcd', msg: '🗄️ etcd guarda el Pod con spec.nodeName="" y fase Pending.', action: () => { state.podStage = 1; renderWeek(); } },
+          { label: '3. Scheduler (Filtro)', msg: '⚠️ kube-scheduler evalúa nodos: 0/1 tienen 64Gi libres → Queda Pending.', action: () => { state.podStage = 3; renderWeek(); log('⚠️ FailedScheduling: 0/1 nodes available: Insufficient memory (64Gi).', 'warn'); } }
+        ], null, 'kubectl apply -f 03-pod-pendiente.yaml && kubectl describe pod kubecafe-barista');
+        return;
+      }
+      if (s === 'Running') {
+        runProcess([
+          { label: '1. API Server', msg: '🏢 kube-apiserver valida el manifiesto YAML...', action: () => { state.podState = 'Running'; state.podStage = 0; renderWeek(); } },
+          { label: '2. etcd', msg: '🗄️ etcd persiste el nuevo Pod (aún sin nodo asignado)...', action: () => { state.podStage = 1; renderWeek(); } },
+          { label: '3. Scheduler', msg: '🧭 kube-scheduler filtra/puntúa y asigna spec.nodeName="worker-01"...', action: () => { state.podStage = 3; renderWeek(); } },
+          { label: '4. kubelet + CRI + CNI', msg: '✅ kubelet detecta el Pod asignado, containerd crea el contenedor y Cilium da IP!', action: () => { state.podStage = 4; renderWeek(); log('Pod kubecafe-barista en estado: <b>Running (10.244.1.18)</b>', 'ok'); } }
+        ], null, 'kubectl apply -f 01-mi-primer-pod.yaml && kubectl get pod kubecafe-barista -o wide');
+        return;
+      }
+      runProcess([
+        { label: '1. API Server & etcd', msg: '🏢 Guardando especificación de Pod con 2 contenedores y volumen emptyDir...', action: () => { state.podState = 'Sidecar'; state.podStage = 1; renderWeek(); } },
+        { label: '2. Scheduler', msg: '🧭 kube-scheduler asigna ambos contenedores juntos a worker-01...', action: () => { state.podStage = 3; renderWeek(); } },
+        { label: '3. kubelet (2/2 Ready)', msg: '✅ cafe-app y log-sidecar comparten IP (localhost) y volumen /var/log!', action: () => { state.podStage = 4; renderWeek(); log('Pod Sidecar en estado: <b>Running (2/2)</b> compartiendo red y emptyDir.', 'ok'); } }
+      ], null, 'kubectl apply -f 05-pod-sidecar.yaml');
+    }
+    function scalePods(delta) {
+      state.replicas = Math.max(1, Math.min(6, state.replicas + delta));
+      while (state.pods.length < state.replicas) {
+        state.pods.push({ id: `barista-${Math.random().toString(36).slice(2, 5)}`, ver: state.version, healthy: true });
+      }
+      if (state.pods.length > state.replicas) state.pods.length = state.replicas;
+      renderWeek();
+      showCmd(`kubectl scale deployment/kubecafe-baristas --replicas=${state.replicas}`);
+      log(`⚖️ ReplicaSet reconcilió estado deseado: ${state.replicas} réplicas.`, 'info');
+    }
+    function killOnePod(idx = 0) {
+      if (state.pods.length === 0) return;
+      const targetIdx = idx < state.pods.length ? idx : 0;
+      const killed = state.pods[targetIdx];
+      runProcess([
+        { label: '1. Pod eliminado', msg: `💥 Eliminando ${killed.id}...`, action: () => { state.pods.splice(targetIdx, 1); renderWeek(); log(`💥 Pod eliminado: ${killed.id}`, 'err'); } },
+        { label: '2. Control Loop', msg: `👁️ ReplicaSet Controller detecta actual=${state.pods.length} != deseado=${state.replicas}.`, action: () => log(`👁️ ReplicaSet detecta déficit (${state.pods.length}/${state.replicas}).`, 'warn') },
+        { label: '3. Crea reemplazo', msg: '⚙️ ReplicaSet solicita un nuevo Pod al API Server...', action: () => {
+          const newborn = `barista-${Math.random().toString(36).slice(2, 5)}`;
+          state.pods.push({ id: newborn, ver: state.version, healthy: true });
+          renderWeek();
+          log(`✨ Self-Healing creó nuevo Pod: ${newborn}`, 'ok');
+        }},
+        { label: '4. Reconciliado', msg: `✅ Estado deseado restaurado (${state.replicas}/${state.replicas} READY)!` }
+      ], null, `kubectl delete pod ${killed.id}`);
+    }
+    function rollingUpdate() {
+      const target = state.version === 'v1.0' ? 'v2.0' : 'v1.0';
+      state.version = target;
+      state.revision += 1;
+      const steps = [];
+      for (let i = 0; i < state.replicas; i++) {
+        steps.push({
+          label: `${i + 1}a. maxSurge (+1 ${target})`,
+          msg: `➕ Nuevo ReplicaSet (${target}) crea 1 Pod extra antes de apagar el antiguo...`,
+          action: () => {
+            state.pods.push({ id: `barista-${Math.random().toString(36).slice(2, 5)}`, ver: target, healthy: true });
+            renderWeek();
+          }
+        });
+        steps.push({
+          label: `${i + 1}b. Termina antiguo`,
+          msg: `➖ El Pod nuevo está Ready → ReplicaSet antiguo reduce 1 Pod...`,
+          action: () => {
+            const oldIdx = state.pods.findIndex(p => p.ver !== target);
+            if (oldIdx !== -1) state.pods.splice(oldIdx, 1);
+            renderWeek();
+            log(`🔄 Relevo ${i + 1}/${state.replicas} completado hacia ${target}`, 'info');
+          }
+        });
+      }
+      steps.push({
+        label: 'Rollout Completo',
+        msg: `✅ ${state.replicas}/${state.replicas} Pods en ${target}. El ReplicaSet anterior queda en 0 Pods para Rollback.`,
+        action: () => log(`✅ RollingUpdate completado hacia <b>${target}</b> (Revisión #${state.revision}).`, 'ok')
+      });
+      runProcess(steps, null, `kubectl set image deployment/kubecafe-baristas app=kubecafe/api:${target}`);
+    }
+    function simulateBadDeployAndRollback() {
+      const safeVer = state.version;
+      const badPod = { id: `barista-err`, ver: 'v99-roto', healthy: false };
+      runProcess([
+        { label: '1. maxSurge (+1 v99-roto)', msg: '🚨 Nuevo ReplicaSet crea 1 Pod con imagen inexistente v99-roto...', action: () => {
+          state.pods.push(badPod);
+          renderWeek();
+          log('🚨 Pod barista-err en estado ImagePullBackOff.', 'err');
+        }},
+        { label: '2. maxUnavailable: 0', msg: `🛡️ Como el nuevo Pod NO está Ready, K8s NO apaga ningún Pod ${safeVer}.`, action: () => log('🛡️ Cero caída: los Pods sanos siguen recibiendo el 100% del tráfico.', 'warn') },
+        { label: '3. rollout undo', msg: `⏪ Ejecutando kubectl rollout undo hacia revisión estable (${safeVer})...`, action: () => {
+          state.pods = state.pods.filter(p => p.healthy);
+          renderWeek();
+          showCmd('kubectl rollout undo deployment/kubecafe-baristas');
+          log(`✅ Rollback exitoso: ReplicaSet defectuoso escalado a 0.`, 'ok');
+        }}
+      ], null, 'kubectl set image deployment/kubecafe-baristas app=kubecafe/api:v99-roto');
+    }
+    function sendTraffic(route) {
+      state.netRoute = route;
+      const svc = route === '/cocina' ? 'cocina-svc' : 'menu-svc';
+      if (state.netLabelBroken) {
+        runProcess([
+          { label: '1. Gateway Cilium', msg: `🚪 Cliente solicita ${route} al Gateway...`, action: () => { state.netStage = 0; renderWeek(); } },
+          { label: '2. HTTPRoute', msg: `🧭 HTTPRoute dirige hacia ${svc}...`, action: () => { state.netStage = 1; renderWeek(); } },
+          { label: '3. 0 Endpoints (503)', msg: `🚨 ${svc} tiene selector roto → EndpointSlice vacío (503 Service Unavailable)!`, action: () => { state.netStage = 2; renderWeek(); log(`🚨 Error 503: ${svc} no tiene Endpoints porque el selector no coincide con los labels de los Pods.`, 'err'); } }
+        ], null, `curl -i http://$GW_IP${route}`);
+        return;
+      }
+      runProcess([
+        { label: '1. Gateway Cilium', msg: `🚪 Cliente llega a Cilium Gateway (:80 ${route})`, action: () => { state.netStage = 0; renderWeek(); } },
+        { label: '2. HTTPRoute', msg: `🧭 HTTPRoute evalúa PathPrefix ${route} → ${svc}`, action: () => { state.netStage = 1; renderWeek(); } },
+        { label: '3. Service + EndpointSlice', msg: `🤵 ${svc} selecciona una IP sana del EndpointSlice`, action: () => { state.netStage = 2; renderWeek(); } },
+        { label: '4. Pod Responde', msg: '☕ Pod sirve respuesta HTTP 200 OK', action: () => { state.netStage = 3; renderWeek(); log(`🌐 ${route} → Cilium Gateway → ${svc} → Pod (200 OK)`, 'ok'); } }
+      ], null, `curl -i http://$GW_IP${route}`);
+    }
+    function sendNodePortTraffic() {
+      state.netRoute = 'nodeport';
+      state.netLabelBroken = false;
+      runProcess([
+        { label: '1. Puerto del Nodo (:30080)', msg: '🔌 Cliente externo conecta directo a <NodeIP>:30080 (sin Gateway)...', action: () => { state.netStage = 2; renderWeek(); } },
+        { label: '2. Service NodePort', msg: '🤵 menu-nodeport-svc reenvía de :30080 → targetPort :80 via EndpointSlice...', action: () => { state.netStage = 3; renderWeek(); log('🔌 Tráfico NodePort :30080 → Pod :80 (200 OK)', 'ok'); } }
+      ], null, 'curl -i http://172.18.0.2:30080');
+    }
+    function sendLoadBalancerTraffic() {
+      state.netRoute = 'lb';
+      state.netLabelBroken = false;
+      runProcess([
+        { label: '1. Cilium LB IPAM + L2 ARP', msg: '⚖️ Cilium asigna 172.16.0.200 (iximiuz-pool) y la anuncia por ARP en eth0...', action: () => { state.netStage = 2; renderWeek(); } },
+        { label: '2. Service LoadBalancer', msg: '☕ kubecafe-lb-svc (sin NodePort) balancea directo a los Pods!', action: () => { state.netStage = 3; renderWeek(); log('⚖️ LoadBalancer 172.16.0.200 → Pod :80 (200 OK, sin NodePort)', 'ok'); } }
+      ], null, 'kubectl apply -f 10a-cilium-ippool-l2.yaml -f 10b-service-loadbalancer-app.yaml && curl -s http://172.16.0.200');
+    }
+    function sendAiGatewayTraffic() {
+      state.netRoute = '/ia/auto';
+      state.netLabelBroken = false;
+      runProcess([
+        { label: '1. Cilium Gateway', msg: '🚪 Petición de inferencia entra a kubecafe-gateway (/ia/auto)...', action: () => { state.netStage = 0; renderWeek(); } },
+        { label: '2. AI Gateway (70/30)', msg: '🤖 HTTPRoute balancea por weight: 70% llama3.2:1b / 30% gemma2:2b...', action: () => { state.netStage = 1; renderWeek(); } },
+        { label: '3. Backend Ollama (:11434)', msg: '🧠 Modelo de IA responde desde el Pod en CPU!', action: () => { state.netStage = 3; renderWeek(); log('🤖 AI Gateway /ia/auto → Ollama :11434 (200 OK)', 'ok'); } }
+      ], null, 'curl -s http://$GW_IP/ia/auto');
+    }
+    function toggleBrokenSelector() {
+      state.netLabelBroken = !state.netLabelBroken;
+      state.netStage = 2;
+      renderWeek();
+      showCmd(state.netLabelBroken ? 'kubectl get endpointslices -l kubernetes.io/service-name=cocina-svc # 0 endpoints!' : 'kubectl patch svc cocina-svc -p \'{"spec":{"selector":{"app":"cocina"}}}\'');
+      log(state.netLabelBroken ? '🏷️ Selector roto: el Service busca app=typo-erroneo y queda con 0 Endpoints.' : '✅ Selector corregido: EndpointSlice vuelve a registrar los 2 Pods.', state.netLabelBroken ? 'err' : 'ok');
+    }
+    function cycleColor() {
+      const order = ['blue', 'green', 'purple'];
+      state.appColor = order[(order.indexOf(state.appColor) + 1) % order.length];
+      state.s04Active = 'cm';
+      renderWeek();
+      showCmd(`kubectl patch configmap app-config -p '{"data":{"APP_COLOR":"${state.appColor}"}}' && kubectl rollout restart deploy/kubecafe-db-app`);
+      log(`🧂 ConfigMap actualizado a APP_COLOR="${state.appColor}" (rollout restart aplica la nueva variable de entorno).`, 'info');
+    }
+    function toggleSecret() {
+      state.secretRevealed = !state.secretRevealed;
+      state.s04Active = 'secret';
+      renderWeek();
+      showCmd(state.secretRevealed ? 'kubectl get secret db-credentials -o jsonpath="{.data.MYSQL_PASSWORD}" | base64 -d' : 'kubectl get secret db-credentials');
+      log(state.secretRevealed ? '🔓 Secret decodificado de Base64.' : '🔐 Secret mostrado en Base64.', 'warn');
+    }
+    function addOrder() {
+      state.pvcOrders += 1;
+      state.s04Active = 'pvc';
+      renderWeek();
+      showCmd(`kubectl exec kubecafe-db-app -- mysql -e "INSERT INTO orders VALUES (${state.pvcOrders});"`);
+      log(`💾 Pedido #${state.pvcOrders} escrito en /var/lib/mysql (PersistentVolume).`, 'ok');
+    }
+    function restartPodWithPvc() {
+      state.s04Active = 'pvc';
+      runProcess([
+        { label: '1. Pod eliminado', msg: '💥 Borrando Pod kubecafe-db-app (su capa efímera desaparece)...', action: () => { state.pvcPodRestarting = true; renderWeek(); log('💥 Pod destruido.', 'warn'); } },
+        { label: '2. PV/PVC Intacto', msg: `🏬 El PersistentVolume mantiene los ${state.pvcOrders} pedidos fuera del Pod.`, action: () => log('🏬 PVC kubecafe-bodega-pvc sigue Bound al PV.', 'info') },
+        { label: '3. Re-montaje exitoso', msg: `✅ Nuevo Pod monta el mismo PVC y encuentra los ${state.pvcOrders} pedidos!`, action: () => { state.pvcPodRestarting = false; renderWeek(); log(`✅ Nuevo Pod listo con ${state.pvcOrders} pedidos intactos.`, 'ok'); } }
+      ], null, 'kubectl delete pod kubecafe-db-app && kubectl get pvc kubecafe-bodega-pvc');
+    }
+    function toggleProbe() {
+      const nextHealthy = !state.probeHealthy;
+      if (!nextHealthy) {
+        runProcess([
+          { label: '1. GET /ready', msg: '🌡️ kubelet ejecuta ReadinessProbe contra GET :8000/ready...', action: () => log('🌡️ kubelet ejecutando ReadinessProbe (/ready)...', 'info') },
+          { label: '2. HTTP 503', msg: '🚨 La app responde 503 (ej. base de datos ocupada)...', action: () => { state.probeHealthy = false; renderWeek(); log('🚨 ReadinessProbe falló (503).', 'err'); } },
+          { label: '3. Sale de EndpointSlice', msg: '✂️ EndpointSlice Controller retira la IP del Pod del Service (SIN reiniciar el Pod)', action: () => log('✂️ Pod retirado del Service sin reiniciarlo.', 'warn') }
+        ], null, 'kubectl describe pod kubecafe-barista | grep -A5 Readiness && kubectl get endpointslices');
+      } else {
+        runProcess([
+          { label: '1. GET /ready', msg: '🌡️ kubelet vuelve a consultar GET :8000/ready...', action: () => log('🌡️ Reintentando ReadinessProbe (/ready)...', 'info') },
+          { label: '2. HTTP 200 OK', msg: '✅ El Pod responde 200 OK y vuelve a recibir tráfico en el EndpointSlice', action: () => { state.probeHealthy = true; renderWeek(); log('✅ ReadinessProbe OK: Pod reincorporado al EndpointSlice.', 'ok'); } }
+        ], null, 'kubectl get endpointslices');
+      }
+    }
+    function setS05Tab(tab) {
+      clearTimers();
+      document.getElementById('processStepper').classList.add('hidden');
+      state.s05Tab = tab;
+      state.rbacResult = null;
+      renderWeek();
+      log(`📂 Sub-módulo S05 cambiado a: <b>${tab.toUpperCase()}</b>`, 'info');
+    }
+    function simStartup() {
+      runProcess([
+        { label: '1. Startup en curso', msg: '🚀 Contenedor iniciando: StartupProbe bloquea Liveness para evitar reinicios prematuros...', action: () => { state.startupDone = false; renderWeek(); } },
+        { label: '2. Startup 200 OK', msg: '✅ StartupProbe respondió 200 OK → Se activan LivenessProbe y ReadinessProbe.', action: () => { state.startupDone = true; renderWeek(); log('✅ StartupProbe exitoso: Liveness y Readiness activos.', 'ok'); } }
+      ], null, 'kubectl describe pod kubecafe-barista | grep -A4 Startup');
+    }
+    function simLivenessFail() {
+      runProcess([
+        { label: '1. Deadlock (/healthz)', msg: '💓 LivenessProbe falla tras alcanzar failureThreshold...', action: () => { state.livenessAlive = false; renderWeek(); log('🚨 LivenessProbe falló: proceso bloqueado.', 'err'); } },
+        { label: '2. Reinicio de Contenedor', msg: '🔄 kubelet reinicia el contenedor (RESTARTS +1)...', action: () => { state.livenessAlive = true; state.livenessRestarts += 1; renderWeek(); log(`🔄 Contenedor reiniciado por kubelet (Restarts: ${state.livenessRestarts}).`, 'warn'); } }
+      ], null, 'kubectl get pod kubecafe-barista -w');
+    }
+    function simResources(mode) {
+      state.resLoad = mode;
+      renderWeek();
+      if (mode === 'normal') {
+        showCmd('kubectl top pod kubecafe-barista');
+        log('⚡ Consumo estable dentro de Requests (CPU 100m / RAM 128Mi).', 'ok');
+      } else if (mode === 'cpu_throttle') {
+        showCmd('kubectl top pod kubecafe-barista # CPU al tope de 250m');
+        log('🔥 CPU alcanzó el Limit (250m): el Kernel aplica CFS Throttling (se frena pero NO se reinicia).', 'warn');
+      } else {
+        showCmd('kubectl describe pod kubecafe-barista | grep -A3 "Last State" # OOMKilled (Exit Code 137)');
+        log('💥 Memoria superó el Limit (256Mi): el Kernel mató el proceso con OOMKilled (Exit 137).', 'err');
+      }
+    }
+    function toggleRbac() {
+      const roles = ['viewer', 'editor', 'admin'];
+      state.rbacRole = roles[(roles.indexOf(state.rbacRole) + 1) % roles.length];
+      state.rbacResult = null;
+      renderWeek();
+      showCmd(`kubectl auth can-i --list --as=system:serviceaccount:default:${state.rbacRole}`);
+      log(`🪪 ServiceAccount activo cambiado a: <b>${state.rbacRole}</b>`, 'info');
+    }
+    function testRbac(verb) {
+      const perms = {
+        viewer: ['get', 'list', 'watch'],
+        editor: ['get', 'list', 'watch', 'create', 'update', 'patch'],
+        admin: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+      };
+      const allowed = perms[state.rbacRole].includes(verb);
+      runProcess([
+        { label: '1. Petición API', msg: `🪪 ServiceAccount "${state.rbacRole}" envía verbo "${verb}" sobre recurso "pods"...`, action: () => {} },
+        { label: '2. Evaluación RBAC', msg: allowed ? `✅ Regla encontrada en Role "${state.rbacRole}-role" (200 OK)` : `🚫 Verbo "${verb}" no permitido en Role "${state.rbacRole}-role" (403 Forbidden)`, action: () => {
+          state.rbacResult = { ok: allowed, text: allowed ? `yes — "${verb} pods" permitido para ${state.rbacRole}` : `no — 403 Forbidden ("${verb} pods" denegado)` };
+          renderWeek();
+          log(allowed ? `✅ RBAC: ${verb} pods permitido para ${state.rbacRole}.` : `🚫 RBAC: ${verb} pods denegado (403) para ${state.rbacRole}.`, allowed ? 'ok' : 'err');
+        }}
+      ], null, `kubectl auth can-i ${verb} pods --as=system:serviceaccount:default:${state.rbacRole}`);
+    }
+    function toggleHelmEnv() {
+      state.helmEnv = state.helmEnv === 'prod' ? 'dev' : 'prod';
+      renderWeek();
+      showCmd(`helm template kubecafe ./kubecafe-chart -f values-${state.helmEnv}.yaml`);
+      log(`📄 Archivo de valores cambiado a <b>values-${state.helmEnv}.yaml</b>`, 'info');
+    }
+    function previewHelmTemplate() {
+      const isProd = state.helmEnv === 'prod';
+      runProcess([
+        { label: '1. Leer Chart.yaml', msg: '📦 Cargando metadatos del Chart kubecafe...', action: () => {} },
+        { label: '2. Inyectar Values', msg: `🔧 Reemplazando {{ .Values.* }} con values-${state.helmEnv}.yaml...`, action: () => {
+          document.getElementById('yamlPreview').textContent = `# Resultado renderizado por helm template (${state.helmEnv.toUpperCase()})\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: kubecafe-baristas\nspec:\n  replicas: ${isProd ? 3 : 1}\n  template:\n    spec:\n      containers:\n        - name: api\n          image: "kubecafe/api:${isProd ? 'v2.0' : 'v2.0-dev'}"`;
+        }},
+        { label: '3. Validación Local', msg: '✅ YAML final generado localmente sin tocar el clúster.', action: () => log('🔍 helm template renderizó las plantillas correctamente.', 'ok') }
+      ], null, `helm template kubecafe ./kubecafe-chart -f values-${state.helmEnv}.yaml`);
+    }
+    function deployHelm() {
+      const isUpgrade = state.helmStage >= 4;
+      if (isUpgrade) state.helmRev += 1;
+      runProcess([
+        { label: '1. Gateway & HTTPRoute', msg: '🚪 Aplicando Cilium Gateway y HTTPRoute...', action: () => { state.helmStage = 1; renderWeek(); } },
+        { label: '2. Deployment & Service', msg: '🔄 Reconciliando Deployment y Services...', action: () => { state.helmStage = 2; renderWeek(); } },
+        { label: '3. ConfigMap & Secret', msg: '🧂 Aplicando ConfigMap y Secret...', action: () => { state.helmStage = 3; renderWeek(); } },
+        { label: '4. Release Desplegado', msg: `🎓 ¡Release kubecafe (Revisión #${state.helmRev}) activo!`, action: () => { state.helmStage = 4; renderWeek(); log(`🎓 helm upgrade --install completado (Revisión #${state.helmRev}).`, 'ok'); } }
+      ], null, `helm upgrade --install kubecafe ./kubecafe-chart -f values-${state.helmEnv}.yaml`);
+    }
+    function rollbackHelm() {
+      if (state.helmRev <= 1) return;
+      const prevRev = state.helmRev - 1;
+      runProcess([
+        { label: '1. Leer Historial Helm', msg: `⏪ Consultando Secret de estado de la revisión #${prevRev}...`, action: () => {} },
+        { label: '2. Restaurar Manifiestos', msg: `✅ Rollback completado a la configuración previa!`, action: () => {
+          state.helmEnv = state.helmEnv === 'prod' ? 'dev' : 'prod';
+          state.helmRev += 1;
+          renderWeek();
+          log(`⏪ helm rollback kubecafe ${prevRev} ejecutado con éxito (nueva Revisión #${state.helmRev}).`, 'ok');
+        }}
+      ], null, `helm rollback kubecafe ${prevRev}`);
+    }
+
+    function switchMainView(view) {
+      const isSim = view === 'simulador';
+      const panelMain = document.getElementById('panelMain');
+      const panelHeaderSub = document.getElementById('panelHeaderSub');
+      const weekTabsBar = document.getElementById('weekTabsBar');
+      const toggleAnalogyBtn = document.getElementById('toggleAnalogyBtn');
+      const simContainer = document.getElementById('simEmbedContainer');
+      const simIframe = document.getElementById('simIframe');
+      const tabPanel = document.getElementById('mainTabPanel');
+      const tabSim = document.getElementById('mainTabSim');
+
+      const activeClasses = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20';
+      const inactiveClasses = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-300 hover:text-white';
+
+      tabPanel.className = isSim ? inactiveClasses : activeClasses;
+      tabSim.className = isSim ? activeClasses : inactiveClasses;
+
+      panelMain.classList.toggle('hidden', isSim);
+      panelHeaderSub.classList.toggle('hidden', isSim);
+      weekTabsBar.classList.toggle('hidden', isSim);
+      toggleAnalogyBtn.classList.toggle('hidden', isSim);
+      simContainer.classList.toggle('hidden', !isSim);
+
+      if (isSim && !simIframe.getAttribute('src')) {
+        simIframe.setAttribute('src', './simulador-interactivo-kubernetes.html?embed=1');
+      }
+      history.replaceState(null, '', isSim ? '#simulador' : '#panel');
+    }
+
+    // Init
+    if (new URLSearchParams(window.location.search).get('embed') === '1') {
+      document.getElementById('topModeSwitcher').classList.add('hidden');
+    }
+    selectWeek(0);
+    if (window.location.hash === '#simulador' || new URLSearchParams(window.location.search).get('tab') === 'simulador') {
+      switchMainView('simulador');
+    }
+  </script>
+</body>
+</html>

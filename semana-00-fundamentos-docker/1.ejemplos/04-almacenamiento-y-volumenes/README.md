@@ -13,6 +13,18 @@ Pero la **libreta de ventas** (`ventas.json`) donde anotas a quién le fías y c
 * **Con Named Volume (`docker volume`):** Es una caja fuerte independiente administrada por Docker. Destruyes el carrito, compras uno nuevo, le montas la caja fuerte y ¡todas las ventas siguen ahí!
 * **Con Bind Mount (`-v host:cont`):** Es tener la libreta física en tu escritorio de la casa conectada por un cable directo al carrito. Puedes editar el archivo desde tu computador (con VS Code) y el contenedor lo lee de inmediato.
 
+```mermaid
+flowchart TD
+    S0_L4_C["☕ Contenedor\n(app-ventas)"] -->|"Sin volumen"| S0_L4_E["🗑️ Capa Efímera\n(Se borra con docker rm)"]
+    S0_L4_C -->|"-v datos-ventas:/app/data"| S0_L4_NV["📦 Named Volume\n(Persiste en Docker)"]
+    S0_L4_C -->|"-v $(pwd)/local:/app/data"| S0_L4_BM["💻 Bind Mount\n(Carpeta real de tu PC)"]
+
+    style S0_L4_C fill:#2563eb,color:#fff
+    style S0_L4_E fill:#dc2626,color:#fff
+    style S0_L4_NV fill:#16a34a,color:#fff
+    style S0_L4_BM fill:#7c3aed,color:#fff
+```
+
 ---
 
 ## 🔬 Los Experimentos Prácticos y Auditoría de Seguridad

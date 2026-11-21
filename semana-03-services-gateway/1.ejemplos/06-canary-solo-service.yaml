@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: barista-v1
+  labels:
+    app: barista
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: barista
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: barista
+        version: v1
+    spec:
+      containers:
+        - name: app
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "charset utf-8;" > /etc/nginx/conf.d/charset.conf
+              echo "☕ Version v1.0 (Estable - 75%) | Pod: $HOSTNAME" > /usr/share/nginx/html/index.html
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: barista-v2-canary
+  labels:
+    app: barista
+    version: v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: barista
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: barista
+        version: v2
+    spec:
+      containers:
+        - name: app
+          image: nginx:alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "charset utf-8;" > /etc/nginx/conf.d/charset.conf
+              echo "🚀 Version v2.0 (Canary - 25%) | Pod: $HOSTNAME" > /usr/share/nginx/html/index.html
+              exec nginx -g "daemon off;"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: barista-canary-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: barista # Selector compartido: incluye v1 (3 Pods) + v2 (1 Pod)
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

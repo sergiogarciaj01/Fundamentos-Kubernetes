@@ -26,3 +26,6 @@ jobs:
         run: |
           echo "Validando archivos YAML (excluyendo carpetas reto-roto)..."
           yamllint -c .yamllint.yml .
+
+      - name: ⚙️ Validar script de gamificación (sintaxis JS)
+        run: node --check scripts/generar-asistentes.js

@@ -1,0 +1,64 @@
+# 🚨 RETO 3 (Nivel Medio): La Estrategia de Rollout Mal Escrita 🚨
+# Síntoma: Al intentar aplicar el archivo con 'kubectl apply', el API Server devuelve:
+#          "error: error validating data: ValidationError(Deployment.spec.strategy.type): unsupported value"
+#          o rechaza los campos de maxSurge por estar mal ubicados en la jerarquía.
+#
+# Pista: En Kubernetes los tipos de estrategia de un Deployment son únicamente 'RollingUpdate' o 'Recreate'
+#        (respetando mayúsculas y minúsculas CamelCase), y los parámetros 'maxSurge' y 'maxUnavailable'
+#        deben vivir dentro del bloque 'rollingUpdate:'.
+# Misión: Corrige la definición de la estrategia para que sea un 'RollingUpdate' válido.
+
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: reto-03-estrategia
+#   labels:
+#     reto: "3"
+# spec:
+#   replicas: 2
+#   strategy:
+#     type: Rollingupdates # ❌ Error: está mal escrito y en minúsculas, En Kubernetes los tipos de estrategia de un Deployment son únicamente 'RollingUpdate' o 'Recreate'
+#     maxSurge: 1          # ❌ Error: debe estar identado dentro de 'rollingUpdate:' 
+#     maxUnavailable: 0    # ❌ Error: debe estar identado dentro de 'rollingUpdate:'
+#     #Ubicación de maxSurge y maxUnavailable: Estos campos regulan cuántos Pods extra se pueden crear temporalmente (maxSurge) y cuántos Pods se pueden apagar al tiempo (maxUnavailable) cuando se aplica la estrategia RollignUpdate, por lo tanto por temas de identación la ubicación de maxSurgey maxUnavailable deben salir del objeto de RollignUpdate
+#   selector:
+#     matchLabels:
+#       app: catalogo
+#   template:
+#     metadata:
+#       labels:
+#         app: catalogo
+#     spec:
+#       containers:
+#         - name: catalogo-svc
+#           image: nginx:alpine
+#           ports:
+#             - containerPort: 80
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reto-03-estrategia
+  labels:
+    reto: "3"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate #Corregido a mayúsculas y minúsculas CamelCase
+    rollingUpdate:
+      maxSurge: 1 #corregido a estar dentro del objeto rollingUpdate
+      maxUnavailable: 0 #corregido a estar dentro del objeto rollingUpdate
+  selector:
+    matchLabels:
+      app: catalogo
+  template:
+    metadata:
+      labels:
+        app: catalogo
+    spec:
+      containers:
+        - name: catalogo-svc
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+

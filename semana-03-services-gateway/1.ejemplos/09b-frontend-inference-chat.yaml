@@ -1,0 +1,254 @@
+# 🖥️ Frontend Web para el Bonus Lab: Chat IA conectado a Gateway API (/v1/chat/completions)
+# Requiere tener aplicado 09-bonus-gateway-inference-extension.yaml y el modelo qwen2.5:0.5b descargado.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inference-chat-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>KubeCafé AI Chat — Gateway API</title>
+      <style>
+        * { box-sizing: border-box; }
+        body {
+          font-family: system-ui, -apple-system, sans-serif;
+          background: #0f172a;
+          color: #f8fafc;
+          margin: 0;
+          padding: 2rem 1rem;
+          display: flex;
+          justify-content: center;
+        }
+        .container {
+          width: 100%;
+          max-width: 760px;
+          background: #1e293b;
+          border: 1px solid #334155;
+          border-radius: 14px;
+          padding: 1.5rem;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        h2 { margin: 0 0 0.35rem 0; color: #38bdf8; }
+        .subtitle { font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem; }
+        .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+        .chip {
+          background: #0f172a;
+          color: #cbd5e1;
+          border: 1px solid #334155;
+          border-radius: 999px;
+          padding: 0.35rem 0.75rem;
+          font-size: 0.82rem;
+          cursor: pointer;
+        }
+        .chip:hover { border-color: #38bdf8; color: #38bdf8; }
+        #chat {
+          background: #020617;
+          border: 1px solid #1e293b;
+          border-radius: 10px;
+          padding: 1rem;
+          min-height: 260px;
+          max-height: 420px;
+          overflow-y: auto;
+          margin-bottom: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .msg { padding: 0.75rem 1rem; border-radius: 10px; line-height: 1.45; white-space: pre-wrap; }
+        .user { background: #1d4ed8; align-self: flex-end; max-width: 85%; }
+        .bot { background: #1e293b; border: 1px solid #334155; align-self: flex-start; max-width: 90%; }
+        .meta { font-size: 0.75rem; color: #94a3b8; margin-top: 0.35rem; }
+        .input-row { display: flex; gap: 0.5rem; }
+        input {
+          flex: 1;
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          border: 1px solid #334155;
+          background: #0f172a;
+          color: #f8fafc;
+          font-size: 1rem;
+        }
+        button#send {
+          padding: 0.75rem 1.25rem;
+          border: none;
+          border-radius: 8px;
+          background: #0284c7;
+          color: #fff;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        button#send:disabled { opacity: 0.5; cursor: not-allowed; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h2>🤖☕ KubeCafé AI Chat — Gateway API</h2>
+        <div class="subtitle">
+          Frontend Nginx (/chat) ➔ Cilium Gateway API ➔ <code>/v1/chat/completions</code> ➔ Ollama (<code>qwen2.5:0.5b</code> en CPU)
+        </div>
+        <div class="chips">
+          <button class="chip" type="button" data-prompt="Explica Kubernetes en 1 frase">Explica Kubernetes en 1 frase</button>
+          <button class="chip" type="button" data-prompt="¿Qué es un Pod en Kubernetes?">¿Qué es un Pod?</button>
+          <button class="chip" type="button" data-prompt="Dame 3 consejos para preparar buen café">Consejos de café</button>
+        </div>
+        <div id="chat">
+          <div class="msg bot">👋 ¡Hola! Escribe una pregunta para enviarla al Gateway API hacia Ollama en CPU.</div>
+        </div>
+        <div class="input-row">
+          <input id="prompt" type="text" placeholder="Escribe tu pregunta aquí..." />
+          <button id="send" type="button">Enviar</button>
+        </div>
+      </div>
+      <script>
+        const chat = document.getElementById('chat');
+        const input = document.getElementById('prompt');
+        const btn = document.getElementById('send');
+
+        document.querySelectorAll('.chip').forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            input.value = chip.getAttribute('data-prompt') || '';
+            sendMessage();
+          });
+        });
+
+        btn.addEventListener('click', sendMessage);
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            sendMessage();
+          }
+        });
+
+        function appendMsg(text, cls, meta = '') {
+          const div = document.createElement('div');
+          div.className = 'msg ' + cls;
+          div.textContent = text;
+          if (meta) {
+            const m = document.createElement('div');
+            m.className = 'meta';
+            m.textContent = meta;
+            div.appendChild(m);
+          }
+          chat.appendChild(div);
+          chat.scrollTop = chat.scrollHeight;
+          return div;
+        }
+
+        async function sendMessage() {
+          const text = input.value.trim();
+          if (!text) return;
+          input.value = '';
+          appendMsg(text, 'user');
+          btn.disabled = true;
+
+          const thinking = appendMsg('⏳ Procesando inferencia en CPU via Gateway API...', 'bot');
+          const t0 = performance.now();
+
+          try {
+            const res = await fetch('/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'qwen2.5:0.5b',
+                temperature: 0.7,
+                max_tokens: 150,
+                frequency_penalty: 0.6,
+                presence_penalty: 0.3,
+                messages: [
+                  { role: 'system', content: 'Eres un asistente técnico conciso. Responde en español en máximo 3 frases sin repetir palabras.' },
+                  { role: 'user', content: text }
+                ]
+              })
+            });
+            const raw = await res.text();
+            const secs = ((performance.now() - t0) / 1000).toFixed(2);
+            thinking.remove();
+
+            let data = null;
+            try { data = JSON.parse(raw); } catch (_) {}
+
+            if (!res.ok) {
+              const detail = (data && data.error && data.error.message) || raw || 'Sin detalles';
+              appendMsg('❌ Error HTTP ' + res.status + ' (' + secs + 's): ' + detail, 'bot');
+            } else if (!data) {
+              appendMsg('❌ Respuesta no JSON (' + secs + 's): ' + raw, 'bot');
+            } else {
+              const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || raw;
+              appendMsg(reply, 'bot', 'Modelo: ' + (data.model || 'qwen2.5:0.5b') + ' • Tiempo: ' + secs + 's');
+            }
+          } catch (err) {
+            thinking.remove();
+            appendMsg('❌ Error de red al consultar /v1/chat/completions: ' + err.message, 'bot');
+          } finally {
+            btn.disabled = false;
+            input.focus();
+          }
+        }
+      </script>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-chat-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inference-chat-ui
+  template:
+    metadata:
+      labels:
+        app: inference-chat-ui
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: html
+          configMap:
+            name: inference-chat-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-chat-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: inference-chat-ui
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kubecafe-chat-ui-route
+spec:
+  parentRefs:
+    - name: kubecafe-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /chat
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: inference-chat-svc
+          port: 80

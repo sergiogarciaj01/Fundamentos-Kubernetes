@@ -1,0 +1,85 @@
+name: "📔 Bitácora Semanal (+10 XP Bonus) y Portafolio Profesional"
+description: "Registra en 20 segundos lo que aprendiste esta semana, suma +10 XP extra y obtén un post personalizado para LinkedIn"
+title: "📔 Bitácora Semanal: [Escribe tu Usuario de GitHub]"
+labels: ["bitacora-semanal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 📔 ¡Suma +10 XP Bonus y construye tu Portafolio KubeCafé! 🏔️☕
+        Con este formulario rápido (**20 segundos**) de **Cloud Native Medellín (CNCF)** sumas **`+10 XP` extra en el ranking oficial** y conviertes tu paso por el workshop en un **Portafolio Profesional verificable**.
+        
+        1. **Escribe tu usuario y qué aprendiste en 1 o 2 frases** (los demás campos son opcionales).
+        2. Haz clic en **`Create`** (o **`Submit new issue`**) al final de la página.
+        
+        🤖 **¿Qué hará nuestro robot en 15 segundos?**
+        * Sumará **`+10 XP Bonus`** a tu puntaje en `ASISTENTES.md` y desbloqueará tu insignia **✍️ Cronista Cloud Native**.
+        * Creará tu `bitacora.md` en `aportes-comunidad/soluciones-retos/<tu-usuario>/<semana>/bitacora.md`.
+        * Te responderá aquí mismo con un **post personalizado para LinkedIn** basado en tus aprendizajes + enlaces de 1 clic.
+
+  - type: input
+    id: github_user
+    attributes:
+      label: "1️⃣ 🐙 Tu Usuario de GitHub"
+      description: "Escribe tu nombre de usuario exacto en GitHub (sin @). Si aún no estabas en el Muro de Asistentes, te registraremos automáticamente."
+      placeholder: "Ej: anagomez-dev"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: semana
+    attributes:
+      label: "2️⃣ 🗓️ ¿Qué semana estás documentando en tu bitácora?"
+      description: "Selecciona el módulo del workshop sobre el que quieres registrar tu reflexión técnica."
+      options:
+        - "semana-00 — 🐳 Fundamentos de Docker (De Código a Contenedor)"
+        - "semana-01 — 🌱 Arquitectura de Kubernetes y Pods"
+        - "semana-02 — 🔄 Deployments, Réplicas y Autorreparación"
+        - "semana-03 — 🌐 Redes en K8s: Services y Gateway API"
+        - "semana-04 — 💾 Configuración y Datos Persistentes (ConfigMaps, Secrets, PV)"
+        - "semana-05 — 🛡️ Salud, Límites y Seguridad (Probes, Quotas, RBAC)"
+        - "semana-06 — 🎓 Empaquetado con Helm y Proyecto Final KubeCafé"
+    validations:
+      required: true
+
+  - type: textarea
+    id: aprendizaje
+    attributes:
+      label: "3️⃣ 💡 ¿Qué aprendiste esta semana? (1 o 2 frases)"
+      description: "Resume brevemente qué fue lo más útil que aprendiste o resolviste esta semana (esto también alimentará tu post de LinkedIn)."
+      placeholder: |
+        - Aprendí cómo funcionan los Deployments y cómo Kubernetes autorepara Pods automáticamente (Self-Healing) sin caída de servicio.
+    validations:
+      required: true
+
+  - type: textarea
+    id: desafio
+    attributes:
+      label: "4️⃣ 🧩 ¿Qué fue lo más retador o qué error lograste diagnosticar? (Opcional)"
+      description: "Cuéntanos qué reto roto o concepto te puso a pensar y cómo descubriste la causa raíz."
+      placeholder: |
+        - En el reto 02 de CrashLoopBackOff usé `kubectl logs` y `kubectl describe pod` para descubrir que el comando tenía un typo (`echho` en lugar de `echo`).
+    validations:
+      required: false
+
+  - type: textarea
+    id: comandos
+    attributes:
+      label: "5️⃣ 💻 Comandos o herramientas que practicaste (Opcional)"
+      description: "Pega aquí los comandos de Docker, kubectl, Kind o herramientas de terminal que más te sirvieron esta semana."
+      placeholder: |
+        kubectl get pods -o wide
+        kubectl describe pod reto-01-imagen
+        kubectl rollout status deployment/kubecafe-web
+    validations:
+      required: false
+
+  - type: textarea
+    id: aplicacion
+    attributes:
+      label: "6️⃣ 🚀 ¿Cómo aplicarías esto en tu trabajo/estudios o qué duda te quedó? (Opcional)"
+      description: "Reflexión final para tu portafolio: ¿dónde ves útil este tema en la vida real o qué quieres seguir explorando?"
+      placeholder: "Quiero aplicar multi-stage builds y usuarios no-root en las APIs de mi portafolio y profundizar en sondas livenessProbe."
+    validations:
+      required: false
+
